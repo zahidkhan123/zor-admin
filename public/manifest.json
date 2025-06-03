@@ -1,0 +1,15 @@
+{
+  "short_name": "Zor",
+  "name": "Zor, The lawyer booking platform",
+  "icons": [
+    {
+      "src": "./assets/images/favicon.png",
+      "sizes": "100x100",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#fff",
+  "background_color": "#ffffff"
+}
