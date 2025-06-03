@@ -34,6 +34,7 @@ const AppHeaderDropdown = () => {
   const user = JSON.parse(localUser)
   const handleLogout = () => {
     localStorage.removeItem('user')
+    localStorage.removeItem('token')
     navigate('/login')
   }
 
