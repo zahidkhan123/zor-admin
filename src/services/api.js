@@ -6,7 +6,9 @@ const getToken = () => {
   const localToken = localStorage.getItem('token')
   return localToken
 }
+// baseURL: 'https://zor-development.onrender.com/api/v1',
 // Create axios instance
+
 const axiosInstance = axios.create({
   baseURL: 'https://zor-development.onrender.com/api/v1',
   headers: {

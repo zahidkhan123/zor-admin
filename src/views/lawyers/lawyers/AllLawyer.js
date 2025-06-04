@@ -180,7 +180,7 @@ const AllLawyer = () => {
 
   return (
     <>
-      <CToaster position="top-end">
+      <CToaster position="top-end" className="mt-4">
         {toastVisible && (
           <CToast
             autohide={true}
@@ -195,127 +195,129 @@ const AllLawyer = () => {
           </CToast>
         )}
       </CToaster>
-      <CCard className="mb-4 p-3">
-        <CRow className="justify-content-center">
-          <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
-            <CWidgetStatsC
-              icon={<CIcon icon={cilPeople} height={36} />}
-              value={summary?.total_lawyers?.toString()}
-              title="Total Lawyers"
-              progress={{ color: 'warning', value: 75 }}
-            />
-          </CCol>
-          <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
-            <CWidgetStatsC
-              icon={<CIcon icon={cilUserFollow} height={36} />}
-              value={summary?.new_lawyers_this_month?.toString()}
-              title="New Lawyers (This Month)"
-              progress={{ color: 'warning', value: 75 }}
-            />
-          </CCol>
-        </CRow>
-      </CCard>
+      <>
+        <CCard className="mb-4 p-3">
+          <CRow className="justify-content-center">
+            <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
+              <CWidgetStatsC
+                icon={<CIcon icon={cilPeople} height={36} />}
+                value={summary?.total_lawyers?.toString()}
+                title="Total Lawyers"
+                progress={{ color: 'warning', value: 75 }}
+              />
+            </CCol>
+            <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
+              <CWidgetStatsC
+                icon={<CIcon icon={cilUserFollow} height={36} />}
+                value={summary?.new_lawyers_this_month?.toString()}
+                title="New Lawyers (This Month)"
+                progress={{ color: 'warning', value: 75 }}
+              />
+            </CCol>
+          </CRow>
+        </CCard>
 
-      <CCardBody>
-        <CRow className="align-items-center mb-3">
-          <CCol xs={12} md={6}>
-            <CButton
-              color="warning"
-              onClick={() => navigate('/lawyers/add', { state: { mode: 'add' } })}
-            >
-              <CIcon icon={cilPlus} className="me-2" />
-              Add New Lawyer
-            </CButton>
-          </CCol>
-        </CRow>
-      </CCardBody>
+        <CCardBody>
+          <CRow className="align-items-center mb-3">
+            <CCol xs={12} md={6}>
+              <CButton
+                color="warning"
+                onClick={() => navigate('/lawyers/add', { state: { mode: 'add' } })}
+              >
+                <CIcon icon={cilPlus} className="me-2" />
+                Add New Lawyer
+              </CButton>
+            </CCol>
+          </CRow>
+        </CCardBody>
 
-      <CCard className="mb-4">
-        <CTable align="middle" className="mb-0 border" hover responsive>
-          <CTableHead className="text-nowrap">
-            <CTableRow>
-              <CTableHeaderCell className="bg-body-tertiary text-center">ID</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">Lawyer</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">Phone</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">Email</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">
-                Age & Gender
-              </CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">Action</CTableHeaderCell>
-            </CTableRow>
-          </CTableHead>
-          <CTableBody>
-            {lawyers.map((lawyer) => (
-              <CTableRow key={lawyer._id}>
-                <CTableDataCell className="text-center">
-                  {lawyer?._id?.slice(-5)?.toUpperCase()}
-                </CTableDataCell>
-                <CTableDataCell className="text-center">
-                  <div className="d-flex align-items-center justify-content-center">
-                    <CAvatar size="md" src={lawyer?.image} />
-                    <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
-                      {lawyer?.name}
-                    </div>
-                  </div>
-                </CTableDataCell>
-                <CTableDataCell className="text-center">{lawyer?.phone}</CTableDataCell>
-                <CTableDataCell className="text-center">{lawyer?.email}</CTableDataCell>
-                <CTableDataCell className="text-center">{`${lawyer?.age} / ${lawyer?.gender_id?.name}`}</CTableDataCell>
-                <CTableDataCell className="text-center">
-                  <CDropdown alignment="end">
-                    <CDropdownToggle
-                      color="transparent"
-                      size="sm"
-                      caret={false}
-                      className="p-0 border-0 shadow-none"
-                    >
-                      <span
-                        style={{
-                          fontSize: '24px',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          marginLeft: '30px',
-                        }}
-                      >
-                        ⋮
-                      </span>
-                    </CDropdownToggle>
-                    <CDropdownMenu>
-                      <CDropdownItem
-                        onClick={() =>
-                          navigate(`/lawyers/view/${lawyer._id}`, { state: { lawyer } })
-                        }
-                      >
-                        View
-                      </CDropdownItem>
-                      <CDropdownItem
-                        onClick={() =>
-                          navigate(`/lawyers/edit/${lawyer._id}`, {
-                            state: { lawyer, mode: 'edit' },
-                          })
-                        }
-                      >
-                        Edit
-                      </CDropdownItem>
-                      <CDropdownItem href="/lawyers/delete">Delete</CDropdownItem>
-                    </CDropdownMenu>
-                  </CDropdown>
-                </CTableDataCell>
+        <CCard className="mb-4">
+          <CTable align="middle" className="mb-0 border" hover responsive>
+            <CTableHead className="text-nowrap">
+              <CTableRow>
+                <CTableHeaderCell className="bg-body-tertiary text-center">ID</CTableHeaderCell>
+                <CTableHeaderCell className="bg-body-tertiary text-center">Lawyer</CTableHeaderCell>
+                <CTableHeaderCell className="bg-body-tertiary text-center">Phone</CTableHeaderCell>
+                <CTableHeaderCell className="bg-body-tertiary text-center">Email</CTableHeaderCell>
+                <CTableHeaderCell className="bg-body-tertiary text-center">
+                  Age & Gender
+                </CTableHeaderCell>
+                <CTableHeaderCell className="bg-body-tertiary text-center">Action</CTableHeaderCell>
               </CTableRow>
-            ))}
-          </CTableBody>
-        </CTable>
-        <CPagination align="end" className="mt-3 me-3">
-          <CPaginationItem
-            aria-label="Previous"
-            disabled={currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}
-          >
-            <span aria-hidden="true">&laquo;</span>
-          </CPaginationItem>
-          {renderPaginationItems()}
-        </CPagination>
-      </CCard>
+            </CTableHead>
+            <CTableBody>
+              {lawyers.map((lawyer) => (
+                <CTableRow key={lawyer._id}>
+                  <CTableDataCell className="text-center">
+                    {lawyer?._id?.slice(-5)?.toUpperCase()}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <div className="d-flex align-items-center justify-content-center">
+                      <CAvatar size="md" src={lawyer?.image} />
+                      <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
+                        {lawyer?.name}
+                      </div>
+                    </div>
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">{lawyer?.phone}</CTableDataCell>
+                  <CTableDataCell className="text-center">{lawyer?.email}</CTableDataCell>
+                  <CTableDataCell className="text-center">{`${lawyer?.age} / ${lawyer?.gender_id?.name}`}</CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <CDropdown alignment="end">
+                      <CDropdownToggle
+                        color="transparent"
+                        size="sm"
+                        caret={false}
+                        className="p-0 border-0 shadow-none"
+                      >
+                        <span
+                          style={{
+                            fontSize: '24px',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            marginLeft: '30px',
+                          }}
+                        >
+                          ⋮
+                        </span>
+                      </CDropdownToggle>
+                      <CDropdownMenu>
+                        <CDropdownItem
+                          onClick={() =>
+                            navigate(`/lawyers/view/${lawyer._id}`, { state: { lawyer } })
+                          }
+                        >
+                          View
+                        </CDropdownItem>
+                        <CDropdownItem
+                          onClick={() =>
+                            navigate(`/lawyers/edit/${lawyer._id}`, {
+                              state: { lawyer, mode: 'edit' },
+                            })
+                          }
+                        >
+                          Edit
+                        </CDropdownItem>
+                        <CDropdownItem href="/lawyers/delete">Delete</CDropdownItem>
+                      </CDropdownMenu>
+                    </CDropdown>
+                  </CTableDataCell>
+                </CTableRow>
+              ))}
+            </CTableBody>
+          </CTable>
+          <CPagination align="end" className="mt-3 me-3">
+            <CPaginationItem
+              aria-label="Previous"
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+            >
+              <span aria-hidden="true">&laquo;</span>
+            </CPaginationItem>
+            {renderPaginationItems()}
+          </CPagination>
+        </CCard>
+      </>
     </>
   )
 }

@@ -26,11 +26,12 @@ import { useGetDropdownsQuery, useCreateLawyerMutation } from '../../../services
 const LawyerProfileForm = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const { data: dropdowns } = useGetDropdownsQuery('Gender,City,Court')
+  const { data: dropdowns } = useGetDropdownsQuery('Gender,Court')
   const [createLawyer, { isLoading }] = useCreateLawyerMutation()
   const { lawyer, mode } = location.state || { mode: 'add' }
   const [submitError, setSubmitError] = useState(null)
   const [showToast, setShowToast] = useState(false)
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -76,10 +77,28 @@ const LawyerProfileForm = () => {
   }
 
   const handleDropdownChange = (type, id) => {
-    const key = type === 'Gender' ? 'gender_id' : type === 'City' ? 'city' : 'court_type_id'
+    const key = type === 'Gender' ? 'gender_id' : 'court_type_id'
     setFormData((prev) => ({
       ...prev,
       [key]: id,
+    }))
+  }
+
+  const handleCnicChange = (e) => {
+    let value = e.target.value.replace(/\D/g, '') // remove non-digits
+    if (value.length > 13) value = value.slice(0, 13)
+
+    let formatted = value
+    if (value.length > 5 && value.length <= 12) {
+      formatted = `${value.slice(0, 5)}-${value.slice(5, 12)}`
+    }
+    if (value.length > 12) {
+      formatted = `${value.slice(0, 5)}-${value.slice(5, 12)}-${value.slice(12)}`
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      cnic: formatted,
     }))
   }
 
@@ -107,14 +126,15 @@ const LawyerProfileForm = () => {
 
   useEffect(() => {
     if (showToast) {
-      const timer = setTimeout(() => setShowToast(false), 4000) // 4 seconds
+      const timer = setTimeout(() => setShowToast(false), 4000)
       return () => clearTimeout(timer)
     }
   }, [showToast])
 
   return (
     <>
-      <CToaster placement="top-end" className="mt-4">
+      {/* Toast Notifications */}
+      {/* <CToaster placement="top-end" className="mt-4">
         {showToast && submitError && (
           <CToast
             autohide={false}
@@ -125,7 +145,7 @@ const LawyerProfileForm = () => {
               background: 'linear-gradient(135deg, #dc3545, #ff6f61)',
               color: '#fff',
               borderRadius: '0.75rem',
-              padding: '0rem 1rem 0rem 1rem',
+              padding: '0rem 1rem',
               minWidth: '320px',
             }}
           >
@@ -142,12 +162,13 @@ const LawyerProfileForm = () => {
             </div>
           </CToast>
         )}
-      </CToaster>
+      </CToaster> */}
 
+      {/* Main Form */}
       <CCard className="p-3">
         <CCardBody>
           <CForm onSubmit={handleSubmit}>
-            {/* Profile Image Row */}
+            {/* Profile Image */}
             <CRow className="mb-4 align-items-center">
               <CCol md={2} className="text-center">
                 <div style={{ position: 'relative' }}>
@@ -198,7 +219,7 @@ const LawyerProfileForm = () => {
               </CCol>
             </CRow>
 
-            {/* Contact Details Row */}
+            {/* Contact Details */}
             <CRow className="mb-3">
               <CCol md={4}>
                 <CFormLabel>Email</CFormLabel>
@@ -206,8 +227,8 @@ const LawyerProfileForm = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="Email"
                   type="email"
+                  placeholder="Email"
                 />
               </CCol>
               <CCol md={4}>
@@ -215,8 +236,13 @@ const LawyerProfileForm = () => {
                 <CFormInput
                   name="phone"
                   value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="033601188315"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    if (value.length <= 11) handleInputChange(e)
+                  }}
+                  type="number"
+                  placeholder="03069161679"
+                  maxLength={11}
                 />
               </CCol>
               <CCol md={4}>
@@ -224,8 +250,13 @@ const LawyerProfileForm = () => {
                 <CFormInput
                   name="whatsapp"
                   value={formData.whatsapp}
-                  onChange={handleInputChange}
-                  placeholder="033601183315"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    if (value.length <= 11) handleInputChange(e)
+                  }}
+                  type="number"
+                  placeholder="03069161679"
+                  maxLength={11}
                 />
               </CCol>
             </CRow>
@@ -237,8 +268,9 @@ const LawyerProfileForm = () => {
                 <CFormInput
                   name="cnic"
                   value={formData.cnic}
-                  onChange={handleInputChange}
+                  onChange={handleCnicChange}
                   placeholder="19014-1103121-1"
+                  maxLength={15}
                 />
               </CCol>
               <CCol md={4}>
@@ -257,24 +289,16 @@ const LawyerProfileForm = () => {
               </CCol>
               <CCol md={4}>
                 <CFormLabel>City</CFormLabel>
-                <CFormSelect
+                <CFormInput
                   name="city"
                   value={formData.city}
-                  onChange={(e) => handleDropdownChange('City', e.target.value)}
-                >
-                  <option value="">Select</option>
-                  {dropdowns?.data
-                    ?.filter((item) => item.type === 'City')
-                    .map((city) => (
-                      <option key={city._id} value={city._id}>
-                        {city.name}
-                      </option>
-                    ))}
-                </CFormSelect>
+                  onChange={handleInputChange}
+                  placeholder="City"
+                />
               </CCol>
             </CRow>
 
-            {/* Court License & Passwords */}
+            {/* Court & Passwords */}
             <CRow className="mb-3">
               <CCol md={4}>
                 <CFormLabel>Latest Court License</CFormLabel>
@@ -313,7 +337,7 @@ const LawyerProfileForm = () => {
               </CCol>
             </CRow>
 
-            {/* Action Buttons */}
+            {/* Submit Buttons */}
             <CRow className="justify-content-end mt-4">
               <CCol xs="auto">
                 <CButton color="secondary" variant="outline" onClick={() => navigate('/lawyers')}>
@@ -324,7 +348,7 @@ const LawyerProfileForm = () => {
                 <CButton color="success" type="submit" disabled={isLoading}>
                   {isLoading ? (
                     <>
-                      <CSpinner component="span" size="sm" aria-hidden="true" className="me-2" />
+                      <CSpinner component="span" size="sm" className="me-2" />
                       Saving...
                     </>
                   ) : mode === 'edit' ? (
