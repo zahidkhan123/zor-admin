@@ -10,7 +10,7 @@ const getToken = () => {
 // Create axios instance
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:3000/api/v1',
+  baseURL: 'https://zor-development.onrender.com/api/v1',
   headers: {
     Authorization: `Bearer ${getToken()}`,
   },
