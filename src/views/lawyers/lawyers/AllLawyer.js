@@ -29,6 +29,7 @@ import {
   CToast,
   CToastHeader,
   CToastBody,
+  CImage,
 } from '@coreui/react'
 import { CPagination, CPaginationItem } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
@@ -36,6 +37,7 @@ import { rgbToHex } from '@coreui/utils'
 import { cilPlus, cilPeople, cilUserFollow } from '@coreui/icons'
 import { useNavigate } from 'react-router-dom'
 import { useGetLawyersQuery } from '../../../services/api'
+import { fetchSignedUrl } from '../../../assets/utils/imageUtils'
 
 const ThemeView = () => {
   const [color, setColor] = useState('rgb(255, 255, 255)')
@@ -86,6 +88,7 @@ const AllLawyer = () => {
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const location = useLocation()
+  const [avatarUrls, setAvatarUrls] = useState({})
 
   useEffect(() => {
     if (location?.state?.lawyerAdded) {
@@ -94,6 +97,32 @@ const AllLawyer = () => {
       window.history.replaceState({}, document.title)
     }
   }, [location])
+
+  // Fetch signed URLs for all lawyer images
+  useEffect(() => {
+    const fetchAvatars = async () => {
+      if (data?.data?.lawyers) {
+        const promises = data.data.lawyers.map(async (lawyer) => {
+          if (lawyer?.image) {
+            try {
+              const url = await fetchSignedUrl(lawyer.image)
+              return { id: lawyer._id, url }
+            } catch (e) {
+              return { id: lawyer._id, url: '' }
+            }
+          }
+          return { id: lawyer._id, url: '' }
+        })
+        const results = await Promise.all(promises)
+        const urlMap = {}
+        results.forEach(({ id, url }) => {
+          urlMap[id] = url
+        })
+        setAvatarUrls(urlMap)
+      }
+    }
+    fetchAvatars()
+  }, [data])
 
   const handlePageChange = (page) => {
     setCurrentPage(page)
@@ -236,6 +265,9 @@ const AllLawyer = () => {
             <CTableHead className="text-nowrap">
               <CTableRow>
                 <CTableHeaderCell className="bg-body-tertiary text-center">ID</CTableHeaderCell>
+                {/* <CTableHeaderCell className="bg-body-tertiary text-center">
+                  Picture
+                </CTableHeaderCell> */}
                 <CTableHeaderCell className="bg-body-tertiary text-center">Lawyer</CTableHeaderCell>
                 <CTableHeaderCell className="bg-body-tertiary text-center">Phone</CTableHeaderCell>
                 <CTableHeaderCell className="bg-body-tertiary text-center">Email</CTableHeaderCell>
@@ -247,13 +279,32 @@ const AllLawyer = () => {
             </CTableHead>
             <CTableBody>
               {lawyers.map((lawyer) => (
-                <CTableRow key={lawyer._id}>
+                <CTableRow
+                  key={lawyer._id}
+                  onClick={() => navigate(`/lawyers/view/${lawyer._id}`, { state: { lawyer } })}
+                >
                   <CTableDataCell className="text-center">
                     {lawyer?._id?.slice(-5)?.toUpperCase()}
                   </CTableDataCell>
+                  {/* <CTableDataCell className="text-center">
+                   
+                  </CTableDataCell> */}
+                  {/* <CTableDataCell className="text-center"></CTableDataCell> */}
                   <CTableDataCell className="text-center">
                     <div className="d-flex align-items-center justify-content-center">
-                      <CAvatar size="md" src={lawyer?.image} />
+                      <CImage
+                        key={lawyer._id}
+                        src={avatarUrls[lawyer._id] || ''}
+                        thumbnail
+                        style={{
+                          width: '50px',
+                          height: '50px',
+                          objectFit: 'cover',
+                          borderRadius: '50%',
+                          cursor: 'pointer',
+                        }}
+                        crossOrigin="anonymous"
+                      />
                       <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
                         {lawyer?.name}
                       </div>

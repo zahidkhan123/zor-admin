@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CCard,
@@ -16,10 +16,12 @@ import {
   CToast,
   CToastBody,
   CToastHeader,
+  CImage,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPhone, cilEnvelopeClosed, cilCalendar, cilUser, cilBadge } from '@coreui/icons'
 import { useUpdateLawyerMutation } from '../../../services/api'
+import { fetchSignedUrl } from '../../../assets/utils/imageUtils'
 
 const LawyerView = () => {
   const location = useLocation()
@@ -30,6 +32,21 @@ const LawyerView = () => {
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastColor, setToastColor] = useState('success')
+  const [avatarUrl, setAvatarUrl] = useState('')
+
+  useEffect(() => {
+    const loadAvatar = async () => {
+      if (lawyer?.image) {
+        try {
+          const url = await fetchSignedUrl(lawyer.image)
+          setAvatarUrl(url)
+        } catch (error) {
+          setAvatarUrl('')
+        }
+      }
+    }
+    loadAvatar()
+  }, [lawyer])
 
   if (!lawyer) return <p>No lawyer data available</p>
 
@@ -92,8 +109,8 @@ const LawyerView = () => {
           <CRow className="mb-4">
             <CCol md={3} className="text-center">
               <div className="position-relative d-inline-block">
-                <CAvatar
-                  src={`/${image}`}
+                <CImage
+                  src={avatarUrl || ''}
                   size="xxl"
                   className="mb-3 border shadow-sm"
                   style={{

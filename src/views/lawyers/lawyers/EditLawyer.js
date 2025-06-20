@@ -104,12 +104,25 @@ const LawyerProfileForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (formData.password && formData.password.length < 4) {
+      setSubmitError({ data: { message: 'Password must be at least 4 characters long.' } })
+      setShowToast(true)
+      return
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setSubmitError({ data: { message: 'Passwords do not match.' } })
+      setShowToast(true)
+      return
+    }
+    debugger
     const submitData = {
       ...formData,
       user_type: 'lawyer',
     }
+    debugger
     delete submitData.confirmPassword
-
+    debugger
     try {
       const response = await createLawyer(submitData).unwrap()
       if (response.success) {
@@ -134,7 +147,7 @@ const LawyerProfileForm = () => {
   return (
     <>
       {/* Toast Notifications */}
-      {/* <CToaster placement="top-end" className="mt-4">
+      <CToaster placement="top-end" className="mt-4">
         {showToast && submitError && (
           <CToast
             autohide={false}
@@ -162,7 +175,7 @@ const LawyerProfileForm = () => {
             </div>
           </CToast>
         )}
-      </CToaster> */}
+      </CToaster>
 
       {/* Main Form */}
       <CCard className="p-3">
@@ -322,6 +335,7 @@ const LawyerProfileForm = () => {
                 <CFormInput
                   name="password"
                   value={formData.password}
+                  minLength={4}
                   onChange={handleInputChange}
                   type="password"
                 />
@@ -331,6 +345,7 @@ const LawyerProfileForm = () => {
                 <CFormInput
                   name="confirmPassword"
                   value={formData.confirmPassword}
+                  minLength={4}
                   onChange={handleInputChange}
                   type="password"
                 />

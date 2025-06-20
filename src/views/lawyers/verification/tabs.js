@@ -34,37 +34,44 @@ const Tabs = ({ path }) => {
   )
   const { data: pendingVerification, isLoading: loadingVerification } = useGetVerificationQuery(
     { ...queryParams, status: 'Pending' },
-    { skip: activeKey !== 3 },
+    { skip: activeKey !== 2 },
   )
   const { data: rejectedVerification, isLoading: loadingRejected } = useGetVerificationQuery(
     { ...queryParams, status: 'Rejected' },
+    { skip: activeKey !== 3 },
+  )
+  const { data: oldVerification, isLoading: loadingOldVerification } = useGetVerificationQuery(
+    { ...queryParams, status: 'Old' },
     { skip: activeKey !== 4 },
   )
-  const { data: verifiedVerification, isLoading: loadingVerified } = useGetVerificationQuery(
-    { ...queryParams, status: 'Verified' },
-    { skip: activeKey !== 2 },
+  const { data: spamVerification, isLoading: loadingSpamVerification } = useGetVerificationQuery(
+    { ...queryParams, status: 'Spam' },
+    { skip: activeKey !== 5 },
   )
 
   const isLoading =
     (activeKey === 1 && loadingPending) ||
-    (activeKey === 2 && loadingVerified) ||
-    (activeKey === 3 && loadingVerification) ||
-    (activeKey === 4 && loadingRejected)
+    (activeKey === 2 && loadingVerification) ||
+    (activeKey === 3 && loadingRejected) ||
+    (activeKey === 4 && loadingOldVerification) ||
+    (activeKey === 5 && loadingSpamVerification)
 
   const tableData =
     activeKey === 1
       ? pendingData?.data?.results || []
       : activeKey === 2
-        ? verifiedVerification?.data?.results || []
+        ? pendingVerification?.data?.results || []
         : activeKey === 3
-          ? pendingVerification?.data?.results || []
-          : rejectedVerification?.data?.results || []
+          ? rejectedVerification?.data?.results || []
+          : activeKey === 4
+            ? oldVerification?.data?.results || []
+            : spamVerification?.data?.results || []
 
   useEffect(() => {
     setQueryParams((prev) => ({ ...prev, page: 1 }))
   }, [activeKey])
 
-  console.log(tableData)
+  // console.log(tableData)
 
   if (isLoading) {
     return (
@@ -96,17 +103,22 @@ const Tabs = ({ path }) => {
         </CNavItem>
         <CNavItem>
           <CNavLink active={activeKey === 2} onClick={() => setActiveKey(2)}>
-            Verified
-          </CNavLink>
-        </CNavItem>
-        <CNavItem>
-          <CNavLink active={activeKey === 3} onClick={() => setActiveKey(3)}>
             Pending
           </CNavLink>
         </CNavItem>
         <CNavItem>
-          <CNavLink active={activeKey === 4} onClick={() => setActiveKey(4)}>
+          <CNavLink active={activeKey === 3} onClick={() => setActiveKey(3)}>
             Rejected
+          </CNavLink>
+        </CNavItem>
+        <CNavItem>
+          <CNavLink active={activeKey === 4} onClick={() => setActiveKey(4)}>
+            Old Verifications
+          </CNavLink>
+        </CNavItem>
+        <CNavItem>
+          <CNavLink active={activeKey === 5} onClick={() => setActiveKey(5)}>
+            Spam
           </CNavLink>
         </CNavItem>
       </CNav>
@@ -183,10 +195,10 @@ const Tabs = ({ path }) => {
                     (activeKey === 1
                       ? pendingData?.data?.totalPages
                       : activeKey === 2
-                        ? verifiedVerification?.data?.totalPages
+                        ? pendingVerification?.data?.totalPages
                         : activeKey === 3
-                          ? pendingVerification?.data?.totalPages
-                          : rejectedVerification?.data?.totalPages) || 0,
+                          ? rejectedVerification?.data?.totalPages
+                          : oldVerification?.data?.totalPages) || 0,
                 }).map((_, i) => (
                   <CPaginationItem
                     key={i}
@@ -204,10 +216,10 @@ const Tabs = ({ path }) => {
                     (activeKey === 1
                       ? pendingData?.data?.totalPages
                       : activeKey === 2
-                        ? verifiedVerification?.data?.totalPages
+                        ? pendingVerification?.data?.totalPages
                         : activeKey === 3
-                          ? pendingVerification?.data?.totalPages
-                          : rejectedVerification?.data?.totalPages)
+                          ? rejectedVerification?.data?.totalPages
+                          : oldVerification?.data?.totalPages)
                   }
                   onClick={() => setQueryParams((prev) => ({ ...prev, page: prev.page + 1 }))}
                 >

@@ -10,7 +10,7 @@ const getToken = () => {
 // Create axios instance
 
 const axiosInstance = axios.create({
-  baseURL: 'https://zor-development.onrender.com/api/v1',
+  baseURL: 'http://localhost:3000/api/v1',
   headers: {
     Authorization: `Bearer ${getToken()}`,
   },
@@ -75,6 +75,13 @@ export const api = createApi({
         url: '/admin/lawyers/create-lawyer',
         method: 'POST',
         body: lawyer,
+      }),
+    }),
+    createUser: builder.mutation({
+      query: (user) => ({
+        url: '/admin/users',
+        method: 'POST',
+        body: user,
       }),
     }),
     getLawyerById: builder.query({
@@ -147,4 +154,5 @@ export const {
   useGetVerificationByIdQuery,
   useVerifyDocumentsMutation,
   useVerifyLawyerMutation,
+  useCreateUserMutation,
 } = api

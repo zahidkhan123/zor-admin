@@ -1,4 +1,4 @@
-import React, { useEffect, useState, createRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import classNames from 'classnames'
 import {
@@ -24,17 +24,17 @@ import {
   CCardGroup,
   CWidgetStatsC,
   CSpinner,
+  CImage,
 } from '@coreui/react'
 import { CPagination, CPaginationItem } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { rgbToHex } from '@coreui/utils'
 import { cilPlus, cilPeople, cilUserFollow } from '@coreui/icons'
 import { useNavigate } from 'react-router-dom'
 import { useGetUsersQuery } from '../../services/api'
-
+import { fetchSignedUrl } from '../../assets/utils/imageUtils'
 const ThemeView = () => {
   const [color, setColor] = useState('rgb(255, 255, 255)')
-  const ref = createRef()
+  const ref = React.createRef()
 
   useEffect(() => {
     const el = ref.current.parentNode.firstChild
@@ -77,7 +77,33 @@ ThemeColor.propTypes = {
 const Users = () => {
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
+  const [avatarUrls, setAvatarUrls] = useState({})
+  const [loadingAvatars, setLoadingAvatars] = useState(true)
   const { data, error, isLoading } = useGetUsersQuery({ page: currentPage, limit: 10 })
+
+  useEffect(() => {
+    const fetchAvatars = async () => {
+      if (!data?.data?.users) return
+
+      setLoadingAvatars(true)
+      const newAvatarUrls = {}
+
+      for (const user of data.data.users) {
+        try {
+          const url = user?.image ? await fetchSignedUrl(user.image) : ''
+          newAvatarUrls[user._id] = url || 'https://via.placeholder.com/50'
+        } catch (error) {
+          console.error(`Error fetching avatar for user ${user._id}:`, error)
+          newAvatarUrls[user._id] = 'https://via.placeholder.com/50'
+        }
+      }
+
+      setAvatarUrls(newAvatarUrls)
+      setLoadingAvatars(false)
+    }
+
+    fetchAvatars()
+  }, [data])
 
   if (isLoading) {
     return (
@@ -93,6 +119,7 @@ const Users = () => {
         <div className="text-danger">
           <CIcon icon={cilPeople} height={36} className="mb-2" />
           <h4>Error fetching users</h4>
+          <p>{error.message}</p>
         </div>
       </div>
     )
@@ -201,6 +228,7 @@ const Users = () => {
           <CTableHead className="text-nowrap">
             <CTableRow>
               <CTableHeaderCell className="bg-body-tertiary text-center">ID</CTableHeaderCell>
+              <CTableHeaderCell className="bg-body-tertiary text-center">Picture</CTableHeaderCell>
               <CTableHeaderCell className="bg-body-tertiary text-center">User</CTableHeaderCell>
               <CTableHeaderCell className="bg-body-tertiary text-center">Phone</CTableHeaderCell>
               <CTableHeaderCell className="bg-body-tertiary text-center">Email</CTableHeaderCell>
@@ -212,13 +240,35 @@ const Users = () => {
           </CTableHead>
           <CTableBody>
             {users.map((user) => (
-              <CTableRow key={user._id}>
+              <CTableRow
+                key={user._id}
+                onClick={() => navigate(`/users/view/${user._id}`, { state: { user } })}
+                style={{ cursor: 'pointer' }}
+              >
                 <CTableDataCell className="text-center">
                   {user._id.slice(-5).toUpperCase()}
                 </CTableDataCell>
                 <CTableDataCell className="text-center">
+                  {loadingAvatars ? (
+                    <CSpinner size="sm" />
+                  ) : (
+                    <CImage
+                      key={user._id}
+                      src={avatarUrls[user._id]}
+                      thumbnail
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        objectFit: 'cover',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                      }}
+                      crossOrigin="anonymous"
+                    />
+                  )}
+                </CTableDataCell>
+                <CTableDataCell className="text-center">
                   <div className="d-flex align-items-center justify-content-center">
-                    <CAvatar size="md" src={user.image} />
                     <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
                       {user.name}
                     </div>
@@ -247,12 +297,14 @@ const Users = () => {
                       </span>
                     </CDropdownToggle>
                     <CDropdownMenu>
-                      <CDropdownItem onClick={() => navigate(`/users/view/${user._id}`)}>
+                      <CDropdownItem
+                        onClick={() => navigate(`/users/view/${user._id}`, { state: { user } })}
+                      >
                         View
                       </CDropdownItem>
-                      <CDropdownItem onClick={() => navigate(`/users/edit/${user._id}`)}>
+                      {/* <CDropdownItem onClick={() => navigate(`/users/edit/${user._id}`)}>
                         Edit
-                      </CDropdownItem>
+                      </CDropdownItem> */}
                       <CDropdownItem href="/users/delete">Delete</CDropdownItem>
                     </CDropdownMenu>
                   </CDropdown>
@@ -270,6 +322,13 @@ const Users = () => {
             <span aria-hidden="true">&laquo;</span>
           </CPaginationItem>
           {renderPaginationItems()}
+          <CPaginationItem
+            aria-label="Next"
+            disabled={currentPage === pagination.totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            <span aria-hidden="true">&raquo;</span>
+          </CPaginationItem>
         </CPagination>
       </CCard>
     </>

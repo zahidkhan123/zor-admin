@@ -38,13 +38,13 @@ const _nav = [
       },
       {
         component: CNavItem,
-        name: 'All Lawyers',
-        to: '/lawyers',
+        name: 'Profile',
+        to: '/profile',
       },
       {
         component: CNavItem,
-        name: 'Profile',
-        to: '/profile',
+        name: 'All Lawyers',
+        to: '/lawyers',
       },
     ],
   },

@@ -7,12 +7,13 @@ const initialState = {
   isAuthenticated: false,
 }
 
-const changeState = (state = initialState, { type, ...rest }) => {
-  switch (type) {
+// Separate reducer for UI state
+const uiReducer = (state = initialState, action) => {
+  switch (action.type) {
     case 'set':
-      return { ...state, ...rest }
+      return { ...state, ...action.payload }
     case 'setAuth':
-      return { ...state, isAuthenticated: rest.isAuthenticated }
+      return { ...state, isAuthenticated: action.payload.isAuthenticated }
     default:
       return state
   }
@@ -20,7 +21,7 @@ const changeState = (state = initialState, { type, ...rest }) => {
 
 const store = configureStore({
   reducer: {
-    ui: changeState,
+    ui: uiReducer,
     [api.reducerPath]: api.reducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(api.middleware),
