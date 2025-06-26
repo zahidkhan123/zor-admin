@@ -270,13 +270,13 @@ const Users = () => {
                 <CTableDataCell className="text-center">
                   <div className="d-flex align-items-center justify-content-center">
                     <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
-                      {user.name}
+                      {user?.name || 'N/A'}
                     </div>
                   </div>
                 </CTableDataCell>
-                <CTableDataCell className="text-center">{user.phone}</CTableDataCell>
-                <CTableDataCell className="text-center">{user.email}</CTableDataCell>
-                <CTableDataCell className="text-center">{`${user.age} / ${user.gender_id.name}`}</CTableDataCell>
+                <CTableDataCell className="text-center">{user?.phone || 'N/A'}</CTableDataCell>
+                <CTableDataCell className="text-center">{user?.email || 'N/A'}</CTableDataCell>
+                <CTableDataCell className="text-center">{`${user?.age} / ${user?.gender_id?.name}`}</CTableDataCell>
                 <CTableDataCell className="text-center">
                   <CDropdown alignment="end">
                     <CDropdownToggle

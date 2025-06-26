@@ -21,16 +21,25 @@ import {
 import { CTooltip } from '@coreui/react'
 import { cilCheckCircle, cilClock, cilFlagAlt } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
-import { useParams } from 'react-router-dom'
-import { useGetVerificationByIdQuery, useVerifyLawyerMutation } from '../../../services/api'
+import { useNavigate, useParams } from 'react-router-dom'
+import {
+  useGetVerificationByIdQuery,
+  useVerifyLawyerMutation,
+  useFlagLawyerMutation,
+} from '../../../services/api'
 
 import { useState, useEffect } from 'react'
 import { fetchSignedUrl, fetchMultipleSignedUrls } from '../../../assets/utils/imageUtils'
+import { DynamicModal } from '../../../components'
 
 const LawyerVerification = () => {
   const { id } = useParams()
-  const { data, isLoading, error, refetch } = useGetVerificationByIdQuery(id)
+  const navigate = useNavigate()
+  const { data, isLoading, error, refetch } = useGetVerificationByIdQuery(id, {
+    refetchOnMountOrArgChange: true,
+  })
   const [verifyLawyer, { isLoading: isSaving }] = useVerifyLawyerMutation()
+  const [flagLawyer, { isLoading: isFlagging }] = useFlagLawyerMutation()
   const [avatarUrl, setAvatarUrl] = useState('')
   const [note, setNote] = useState('')
   const [selectedImage, setSelectedImage] = useState(null)
@@ -38,7 +47,8 @@ const LawyerVerification = () => {
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastColor, setToastColor] = useState('success')
-  // Now, each document has a status: 'approved', 'declined', or null (pending)
+  const [showFlagModal, setShowFlagModal] = useState(false)
+
   const [documentStatus, setDocumentStatus] = useState({
     cnic: { status: null, files: [] },
     provisional_bar: { status: null, files: [] },
@@ -46,73 +56,71 @@ const LawyerVerification = () => {
     supreme_court: { status: null, files: [] },
     barrister: { status: null, files: [] },
   })
-  const lawyer = data?.data
-  useEffect(() => {
-    if (lawyer?.image) {
-      fetchSignedUrl(lawyer.image).then((url) => setAvatarUrl(url))
-    }
 
-    // Initialize document status from existing data
+  const lawyer = data?.data
+
+  const initializeDocumentStatus = (lawyerData) => {
+    setDocumentStatus({
+      cnic: {
+        status:
+          lawyerData.is_verified_cnic === true
+            ? 'approved'
+            : lawyerData.is_verified_cnic === false
+              ? 'declined'
+              : null,
+        files: lawyerData.proof_files || [],
+      },
+      provisional_bar: {
+        status:
+          lawyerData.provisional_bar?.is_verified === true
+            ? 'approved'
+            : lawyerData.provisional_bar?.is_verified === false
+              ? 'declined'
+              : null,
+        files: lawyerData.provisional_bar?.proof_files || [],
+      },
+      high_court: {
+        status:
+          lawyerData.high_court?.is_verified === true
+            ? 'approved'
+            : lawyerData.high_court?.is_verified === false
+              ? 'declined'
+              : null,
+        files: lawyerData.high_court?.proof_files || [],
+      },
+      supreme_court: {
+        status:
+          lawyerData.supreme_court?.is_verified === true
+            ? 'approved'
+            : lawyerData.supreme_court?.is_verified === false
+              ? 'declined'
+              : null,
+        files: lawyerData.supreme_court?.proof_files || [],
+      },
+      barrister: {
+        status:
+          lawyerData.barrister?.is_verified === true
+            ? 'approved'
+            : lawyerData.barrister?.is_verified === false
+              ? 'declined'
+              : null,
+        files: lawyerData.barrister?.proof_files || [],
+      },
+    })
+  }
+
+  useEffect(() => {
     if (lawyer) {
-      setDocumentStatus({
-        cnic: {
-          status:
-            lawyer.is_verified_cnic === true
-              ? 'approved'
-              : lawyer.is_verified_cnic === false
-                ? 'declined'
-                : null,
-          files: lawyer.proof_files || [],
-        },
-        provisional_bar: {
-          status:
-            lawyer.provisional_bar?.is_verified === true
-              ? 'approved'
-              : lawyer.provisional_bar?.is_verified === false
-                ? 'declined'
-                : null,
-          files: lawyer.provisional_bar?.proof_files || [],
-        },
-        high_court: {
-          status:
-            lawyer.high_court?.is_verified === true
-              ? 'approved'
-              : lawyer.high_court?.is_verified === false
-                ? 'declined'
-                : null,
-          files: lawyer.high_court?.proof_files || [],
-        },
-        supreme_court: {
-          status:
-            lawyer.supreme_court?.is_verified === true
-              ? 'approved'
-              : lawyer.supreme_court?.is_verified === false
-                ? 'declined'
-                : null,
-          files: lawyer.supreme_court?.proof_files || [],
-        },
-        barrister: {
-          status:
-            lawyer.barrister?.is_verified === true
-              ? 'approved'
-              : lawyer.barrister?.is_verified === false
-                ? 'declined'
-                : null,
-          files: lawyer.barrister?.proof_files || [],
-        },
-      })
+      if (lawyer.image) {
+        fetchSignedUrl(lawyer.image).then((url) => setAvatarUrl(url))
+      }
+      initializeDocumentStatus(lawyer)
     }
   }, [lawyer])
 
-  if (isLoading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
-        <CSpinner color="primary" style={{ width: '3rem', height: '3rem' }} variant="grow" />
-      </div>
-    )
+  const handleFlagClick = () => {
+    setShowFlagModal(true)
   }
-
-  if (error) return <div>Error loading verification data</div>
 
   const handleNoteChange = (e) => setNote(e.target.value)
 
@@ -121,26 +129,29 @@ const LawyerVerification = () => {
     setShowModal(true)
   }
 
-  const handleFlagClick = async () => {
+  const confirmFlagProfile = async () => {
     try {
-      // Call your API endpoint here
-      const response = await axios.post('/api/flag-profile', {
-        lawyerId: lawyer.id,
-        // any other data you need to send
-      })
+      const lawyerId = lawyer.lawyer
+      const result = await flagLawyer(lawyerId).unwrap()
+      if (result.success) {
+        // Option 1: Force parent refresh
+        navigate('/verification', {
+          state: { refresh: true, timestamp: Date.now() },
+          replace: true,
+        })
 
-      // Show success feedback
-      toast.success('Profile flagged successfully')
+        // Option 2: Invalidate cache
+        api.util.invalidateTags(['Lawyers', 'Verifications'])
 
-      // Optional: Update UI state if needed
-      // setFlagged(true);
+        setShowFlagModal(false)
+        triggerToast('Profile flagged successfully', 'success')
+      }
     } catch (error) {
       console.error('Error flagging profile:', error)
-      toast.error('Failed to flag profile')
+      setShowFlagModal(false)
+      triggerToast('Failed to flag profile', 'danger')
     }
   }
-
-  // Approve/Decline logic for each document
   const handleApproveDocument = (section) => {
     setDocumentStatus((prev) => ({
       ...prev,
@@ -162,8 +173,6 @@ const LawyerVerification = () => {
   }
 
   const handleSave = async () => {
-    debugger
-    // Map status to boolean for API: approved=true, declined=false, null=undefined
     const mapStatus = (status) =>
       status === 'approved' ? true : status === 'declined' ? false : undefined
 
@@ -178,11 +187,16 @@ const LawyerVerification = () => {
       },
       ...(note && { note }),
     }
-    debugger
+
     try {
       await verifyLawyer(verificationData).unwrap()
+      const updated = await refetch()
       triggerToast('Verification status updated successfully', 'success')
-      refetch() // Refresh the data to get latest status
+      if (updated?.data?.data) {
+        initializeDocumentStatus(updated.data.data)
+      }
+      // Navigate back with refresh flag
+      navigate('/verification', { state: { refresh: true } })
     } catch (error) {
       console.error(error)
       triggerToast('Failed to update verification status', 'danger')
@@ -196,20 +210,28 @@ const LawyerVerification = () => {
     setTimeout(() => setShowToast(false), 3000)
   }
 
-  // Check if any document verification status has changed
   const hasChanges = () => {
-    // Map status to boolean for comparison
     const mapStatus = (status) =>
       status === 'approved' ? true : status === 'declined' ? false : undefined
 
     return (
-      mapStatus(documentStatus.cnic.status) !== lawyer?.cnic_verified ||
-      mapStatus(documentStatus.provisional_bar.status) !== lawyer?.provisional_bar?.verified ||
-      mapStatus(documentStatus.high_court.status) !== lawyer?.high_court?.verified ||
-      mapStatus(documentStatus.supreme_court.status) !== lawyer?.supreme_court?.verified ||
-      mapStatus(documentStatus.barrister.status) !== lawyer?.barrister?.verified
+      mapStatus(documentStatus.cnic.status) !== lawyer?.is_verified_cnic ||
+      mapStatus(documentStatus.provisional_bar.status) !== lawyer?.provisional_bar?.is_verified ||
+      mapStatus(documentStatus.high_court.status) !== lawyer?.high_court?.is_verified ||
+      mapStatus(documentStatus.supreme_court.status) !== lawyer?.supreme_court?.is_verified ||
+      mapStatus(documentStatus.barrister.status) !== lawyer?.barrister?.is_verified
     )
   }
+
+  if (isLoading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+        <CSpinner color="primary" style={{ width: '3rem', height: '3rem' }} variant="grow" />
+      </div>
+    )
+  }
+
+  if (error) return <div>Error loading verification data</div>
 
   return (
     <>
@@ -231,22 +253,17 @@ const LawyerVerification = () => {
 
       <CCard>
         <CCardBody>
-          <CRow className="align-items-center mb-4 p-4  position-relative">
-            {/* Beautifully adjusted flag icon */}
+          <CRow className="align-items-center mb-4 p-4 position-relative">
             <div
               style={{
                 position: 'absolute',
                 top: 7,
                 right: 20,
                 zIndex: 2,
-                // background: 'rgba(255,255,255,0.85)',
-                // borderRadius: '50%',
-                // boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
                 padding: 8,
                 display: 'flex',
                 alignItems: 'flex-end',
                 justifyContent: 'flex-end',
-                // transition: 'box-shadow 0.2s',
               }}
               className="flag-icon-hover"
             >
@@ -262,6 +279,17 @@ const LawyerVerification = () => {
                 }}
               />
             </div>
+            <DynamicModal
+              visible={showFlagModal}
+              iconType="danger"
+              message="Are you sure you want to flag this profile?"
+              confirmLabel="Yes, Flag"
+              cancelLabel="Cancel"
+              onCancel={() => setShowFlagModal(false)}
+              onConfirm={confirmFlagProfile}
+              confirmColor="danger"
+              cancelColor="secondary"
+            />
             <CCol xs={12} md="auto" className="text-center">
               <div className="position-relative">
                 <CImage
@@ -321,47 +349,6 @@ const LawyerVerification = () => {
             </CCol>
           </CRow>
 
-          {/* <VerificationSection
-            title="ID Card Verification"
-            images={documentStatus.cnic.files}
-            status={documentStatus.cnic.status}
-            currentStatus={lawyer?.is_verified_cnic}
-            onApprove={() => handleApproveDocument('cnic')}
-            onDecline={() => handleDeclineDocument('cnic')}
-          />
-          <VerificationSection
-            title={`Provisional Bar - ${lawyer?.provisional_bar?.name?.name || ''}`}
-            images={documentStatus.provisional_bar.files}
-            status={documentStatus.provisional_bar.status}
-            currentStatus={lawyer?.provisional_bar?.is_verified}
-            onApprove={() => handleApproveDocument('provisional_bar')}
-            onDecline={() => handleDeclineDocument('provisional_bar')}
-          />
-          <VerificationSection
-            title="High Court"
-            images={documentStatus.high_court.files}
-            status={documentStatus.high_court.status}
-            currentStatus={lawyer?.high_court?.is_verified}
-            onApprove={() => handleApproveDocument('high_court')}
-            onDecline={() => handleDeclineDocument('high_court')}
-          />
-          <VerificationSection
-            title="Supreme Court"
-            images={documentStatus.supreme_court.files}
-            status={documentStatus.supreme_court.status}
-            currentStatus={lawyer?.supreme_court?.is_verified}
-            onApprove={() => handleApproveDocument('supreme_court')}
-            onDecline={() => handleDeclineDocument('supreme_court')}
-          />
-          <VerificationSection
-            title="Barrister"
-            images={documentStatus.barrister.files}
-            status={documentStatus.barrister.status}
-            currentStatus={lawyer?.barrister?.is_verified}
-            onApprove={() => handleApproveDocument('barrister')}
-            onDecline={() => handleDeclineDocument('barrister')}
-          /> */}
-
           <VerificationSection
             title="ID Card Verification"
             images={documentStatus.cnic.files}
@@ -414,11 +401,11 @@ const LawyerVerification = () => {
             infoFields={[
               {
                 label: 'License Number',
-                value: lawyer?.high_court?.registration_number,
+                value: lawyer?.high_court?.license_number,
               },
               {
                 label: 'Eligibility Date',
-                value: lawyer?.high_court?.license_issue_date?.slice(0, 10),
+                value: lawyer?.high_court?.license_expiry?.slice(0, 10),
               },
             ]}
           />
@@ -434,11 +421,11 @@ const LawyerVerification = () => {
             infoFields={[
               {
                 label: 'License Number',
-                value: lawyer?.supreme_court?.registration_number,
+                value: lawyer?.supreme_court?.license_number,
               },
               {
                 label: 'Eligibility Date',
-                value: lawyer?.supreme_court?.license_issue_date?.slice(0, 10),
+                value: lawyer?.supreme_court?.license_expiry?.slice(0, 10),
               },
             ]}
           />
@@ -453,7 +440,6 @@ const LawyerVerification = () => {
             imageLabel="Proof Picture"
           />
 
-          {/* Note */}
           <div className="mt-4">
             <h6>Add Note</h6>
             <CFormTextarea
@@ -464,7 +450,6 @@ const LawyerVerification = () => {
             />
           </div>
 
-          {/* Save Button */}
           {isSaving ? (
             <div className="d-flex justify-content-end mt-4">
               <CSpinner size="sm" className="me-2" />
@@ -478,7 +463,6 @@ const LawyerVerification = () => {
             </div>
           )}
 
-          {/* Image Preview Modal */}
           <CModal visible={showModal} onClose={() => setShowModal(false)} size="lg">
             <CModalHeader onClose={() => setShowModal(false)}>
               <CModalTitle>Image Preview</CModalTitle>
@@ -509,8 +493,6 @@ const LawyerVerification = () => {
     </>
   )
 }
-
-// Updated VerificationSection with Approve/Decline buttons and logic
 
 export const VerificationSection = ({
   title,
@@ -565,7 +547,6 @@ export const VerificationSection = ({
         </h5>
 
         <CRow className="align-items-start">
-          {/* Left Column: Info Fields */}
           <CCol md={4}>
             {infoFields?.map(({ label, value }, idx) => (
               <div key={idx} className="mb-2 d-flex">
@@ -575,7 +556,6 @@ export const VerificationSection = ({
             ))}
           </CCol>
 
-          {/* Right Column: Images + Buttons */}
           <CCol md={8}>
             <div className="d-flex flex-wrap gap-3 mb-3 align-items-center justify-content-center">
               {signedUrls.map((url, idx) => (
@@ -583,7 +563,7 @@ export const VerificationSection = ({
                   key={idx}
                   src={url}
                   thumbnail
-                  style={{ width: '300px', height: '200px', cursor: 'pointer' }}
+                  style={{ width: '250px', height: '200px', cursor: 'pointer' }}
                   crossOrigin="anonymous"
                   onClick={() => {
                     setSelectedImage(url)
@@ -613,7 +593,6 @@ export const VerificationSection = ({
           </CCol>
         </CRow>
 
-        {/* Modal */}
         <CModal visible={showModal} onClose={() => setShowModal(false)} size="lg">
           <CModalHeader onClose={() => setShowModal(false)}>
             <CModalTitle>Image Preview</CModalTitle>
@@ -638,134 +617,5 @@ export const VerificationSection = ({
     </CCard>
   )
 }
-
-// export const VerificationSection = ({
-//   title,
-//   images = [],
-//   status,
-//   currentStatus,
-//   onApprove,
-//   onDecline,
-// }) => {
-//   const [signedUrls, setSignedUrls] = useState([])
-//   const [selectedImage, setSelectedImage] = useState(null)
-//   const [showModal, setShowModal] = useState(false)
-
-//   useEffect(() => {
-//     const fetchImages = async () => {
-//       if (!images?.length) return
-//       try {
-//         const urls = await fetchMultipleSignedUrls(images.filter(Boolean))
-//         setSignedUrls(urls.filter(Boolean))
-//       } catch (error) {
-//         console.error('Error fetching signed URLs:', error)
-//       }
-//     }
-
-//     fetchImages()
-//   }, [images])
-
-//   if (!signedUrls.length) return null
-
-//   // Button color and label logic
-//   // Button color and label logic
-//   let approveColor = 'success' // CoreUI's success (green) color
-//   let declineColor = 'danger' // CoreUI's danger (red) color
-//   let approveVariant = 'outline'
-//   let declineVariant = 'outline'
-
-//   if (status === 'approved') {
-//     approveColor = 'success'
-//     approveVariant = ''
-//     declineColor = 'danger'
-//     declineVariant = 'outline'
-//   } else if (status === 'declined') {
-//     declineColor = 'danger'
-//     declineVariant = ''
-//     approveColor = 'success'
-//     approveVariant = 'outline'
-//   }
-
-//   return (
-//     <CCard className="mb-4">
-//       <CCardBody>
-//         <div className="d-flex pr-3 align-items-center mb-3">
-//           <h6 className="mb-0">{title}</h6>
-//           {status === 'approved' ? (
-//             <CIcon icon={cilCheckCircle} className="text-success ms-2" size="lg" title="Approved" />
-//           ) : status === 'declined' ? (
-//             <CIcon icon={cilClock} className="text-danger ms-2" size="lg" title="Declined" />
-//           ) : (
-//             <CIcon icon={cilClock} className="text-secondary ms-2" size="lg" title="Pending" />
-//           )}
-//         </div>
-//         <CRow className="g-3 align-items-center">
-//           <CCol xs={12}>
-//             <div className="d-flex flex-wrap gap-3">
-//               {signedUrls.map((url, idx) => (
-//                 <CImage
-//                   key={idx}
-//                   src={url}
-//                   thumbnail
-//                   style={{
-//                     width: '300px',
-//                     height: '200px',
-//                     objectFit: 'cover',
-//                     cursor: 'pointer',
-//                   }}
-//                   crossOrigin="anonymous"
-//                   onClick={() => {
-//                     setSelectedImage(url)
-//                     setShowModal(true)
-//                   }}
-//                 />
-//               ))}
-//             </div>
-//           </CCol>
-//         </CRow>
-
-//         <div className="d-flex justify-content-end mt-3 gap-2">
-//           <CButton
-//             color={approveColor}
-//             variant={approveVariant}
-//             onClick={onApprove}
-//             disabled={status === 'approved'}
-//           >
-//             Approve
-//           </CButton>
-//           <CButton
-//             color={declineColor}
-//             variant={declineVariant}
-//             onClick={onDecline}
-//             disabled={status === 'declined'}
-//           >
-//             Decline
-//           </CButton>
-//         </div>
-
-//         <CModal visible={showModal} onClose={() => setShowModal(false)} size="lg">
-//           <CModalHeader onClose={() => setShowModal(false)}>
-//             <CModalTitle>Image Preview</CModalTitle>
-//           </CModalHeader>
-//           <CModalBody className="text-center">
-//             {selectedImage && (
-//               <CImage
-//                 src={selectedImage}
-//                 alt="Preview"
-//                 style={{ width: '500px', height: '200px', objectFit: 'cover' }}
-//                 crossOrigin="anonymous"
-//               />
-//             )}
-//           </CModalBody>
-//           <CModalFooter>
-//             <CButton color="secondary" onClick={() => setShowModal(false)}>
-//               Close
-//             </CButton>
-//           </CModalFooter>
-//         </CModal>
-//       </CCardBody>
-//     </CCard>
-//   )
-// }
 
 export default LawyerVerification

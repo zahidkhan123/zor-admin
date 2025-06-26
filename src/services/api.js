@@ -10,7 +10,7 @@ const getToken = () => {
 // Create axios instance
 
 const axiosInstance = axios.create({
-  baseURL: 'https://zor-development.onrender.com/api/v1',
+  baseURL: 'http://localhost:3000/api/v1',
   headers: {
     Authorization: `Bearer ${getToken()}`,
   },
@@ -135,6 +135,18 @@ export const api = createApi({
         body: payload,
       }),
     }),
+    flagLawyer: builder.mutation({
+      query: (id) => ({
+        url: `/admin/lawyers/${id}/flag`,
+        method: 'PUT',
+      }),
+    }),
+    getFlaggedLawyers: builder.query({
+      query: ({ page = 1, limit = 10 }) => ({
+        url: `/admin/lawyers/flagged-lawyers?page=${page}&limit=${limit}`,
+        method: 'GET',
+      }),
+    }),
   }),
 })
 
@@ -155,4 +167,6 @@ export const {
   useVerifyDocumentsMutation,
   useVerifyLawyerMutation,
   useCreateUserMutation,
+  useFlagLawyerMutation,
+  useGetFlaggedLawyersQuery,
 } = api

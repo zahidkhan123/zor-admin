@@ -80,7 +80,12 @@ const LawyerView = () => {
         setToastMessage(`Lawyer ${status} successfully`)
         setToastColor('success')
         setShowToast(true)
-        navigate('/registration', { state: { modified: true } })
+        navigate('/registration', {
+          state: {
+            modified: true,
+            tab: status === 'approved' ? 'approved' : 'rejected',
+          },
+        })
       } else {
         setToastMessage(result?.data?.message)
         setToastColor('danger')

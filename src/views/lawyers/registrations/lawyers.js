@@ -1,12 +1,8 @@
 import React, { useEffect, useState, createRef } from 'react'
-import { useLocation } from 'react-router-dom'
-import PropTypes from 'prop-types'
-import classNames from 'classnames'
 import {
   CRow,
   CCol,
   CCard,
-  CCardHeader,
   CCardBody,
   CTable,
   CTableBody,
@@ -15,86 +11,55 @@ import {
   CTableHeaderCell,
   CTableRow,
   CAvatar,
-  CProgress,
+  CPagination,
+  CPaginationItem,
   CDropdown,
   CDropdownToggle,
   CDropdownMenu,
   CDropdownItem,
   CButton,
-  CFormInput,
-  CCardGroup,
-  CWidgetStatsC,
   CSpinner,
   CToaster,
   CToast,
-  CToastHeader,
   CToastBody,
   CToastClose,
+  CNav,
+  CNavItem,
+  CNavLink,
+  CWidgetStatsC,
 } from '@coreui/react'
-import { CPagination, CPaginationItem } from '@coreui/react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
-import { rgbToHex } from '@coreui/utils'
-import { cilPlus, cilPeople, cilUserFollow } from '@coreui/icons'
-import { useNavigate } from 'react-router-dom'
+import { cilPeople, cilUserFollow, cilPlus } from '@coreui/icons'
 import { useGetLawyersQuery, useUpdateLawyerMutation } from '../../../services/api'
 import { FaCheckCircle } from 'react-icons/fa'
-const ThemeView = () => {
-  const [color, setColor] = useState('rgb(255, 255, 255)')
-  const ref = createRef()
 
-  useEffect(() => {
-    const el = ref.current.parentNode.firstChild
-    const varColor = window.getComputedStyle(el).getPropertyValue('background-color')
-    setColor(varColor)
-  }, [ref])
-
-  return (
-    <table className="table w-100" ref={ref}>
-      <tbody>
-        <tr>
-          <td className="text-body-secondary">HEX:</td>
-          <td className="font-weight-bold">{rgbToHex(color)}</td>
-        </tr>
-        <tr>
-          <td className="text-body-secondary">RGB:</td>
-          <td className="font-weight-bold">{color}</td>
-        </tr>
-      </tbody>
-    </table>
-  )
-}
-
-const ThemeColor = ({ className, children }) => {
-  const classes = classNames(className, 'theme-color w-75 rounded mb-3')
-  return (
-    <CCol xs={12} sm={6} md={4} xl={2} className="mb-4">
-      <div className={classes} style={{ paddingTop: '75%' }}></div>
-      {children}
-      <ThemeView />
-    </CCol>
-  )
-}
-
-ThemeColor.propTypes = {
-  children: PropTypes.node,
-  className: PropTypes.string,
-}
+const tabs = [
+  { key: 'pending', label: 'New Registrations' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'rejected', label: 'Rejected' },
+]
 
 const Registration = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  console.log('location', location)
-  const { modified } = location.state || {} // destructuring with fallback
-
-  console.log('modified', modified)
+  const { modified } = location.state || {}
+  const [updateLawyer, { isLoading: isUpdating, isSuccess: isUpdated }] = useUpdateLawyerMutation()
+  const [activeTab, setActiveTab] = useState('pending')
   const [currentPage, setCurrentPage] = useState(1)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  useEffect(() => {
+    if (location?.state?.tab) {
+      setActiveTab(location.state.tab)
+      window.history.replaceState({}, document.title)
+    }
+  }, [location?.state?.tab])
   const { data, error, isLoading, refetch } = useGetLawyersQuery({
     page: currentPage,
     limit: 10,
-    type: 'pending',
+    type: activeTab,
   })
-  const [toastVisible, setToastVisible] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
 
   useEffect(() => {
     if (location?.state?.lawyerAdded) {
@@ -105,25 +70,34 @@ const Registration = () => {
   }, [location])
 
   useEffect(() => {
-    if (modified) {
-      refetch()
+    if (modified || location?.state?.tab) {
+      refetch({ force: true }) // this ensures fresh data
       setToastMessage('Lawyer updated successfully!')
       setToastVisible(true)
+
+      // Clear the navigation state to avoid repeated refetch
+      window.history.replaceState({}, document.title)
     }
-  }, [modified, refetch])
+  }, [modified, activeTab, refetch, location?.state?.tab])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab])
+
+  const handlePageChange = (page) => setCurrentPage(page)
 
   const renderPaginationItems = () => {
-    const totalPages = data?.data?.pagination?.totalPages
+    const totalPages = data?.data?.pagination?.totalPages || 1
     const items = []
 
-    // Always show first page
+    if (totalPages <= 1) return items
+
     items.push(
       <CPaginationItem key={1} active={currentPage === 1} onClick={() => handlePageChange(1)}>
         1
       </CPaginationItem>,
     )
 
-    // Show ellipsis if there are more than 3 pages before current page
     if (currentPage > 3) {
       items.push(
         <CPaginationItem key="ellipsis1" disabled>
@@ -132,7 +106,6 @@ const Registration = () => {
       )
     }
 
-    // Show pages around current page
     for (
       let i = Math.max(2, currentPage - 1);
       i <= Math.min(totalPages - 1, currentPage + 1);
@@ -145,7 +118,6 @@ const Registration = () => {
       )
     }
 
-    // Show ellipsis if there are more than 3 pages after current page
     if (currentPage < totalPages - 2) {
       items.push(
         <CPaginationItem key="ellipsis2" disabled>
@@ -154,7 +126,6 @@ const Registration = () => {
       )
     }
 
-    // Always show last page if there is more than one page
     if (totalPages > 1) {
       items.push(
         <CPaginationItem
@@ -183,63 +154,40 @@ const Registration = () => {
       <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
         <div className="text-danger">
           <CIcon icon={cilPeople} height={36} className="mb-2" />
-          <h4>Error fetching Lawyers</h4>
+          <h4>Error fetching lawyers</h4>
         </div>
       </div>
     )
   }
 
-  const { lawyers, summary, pagination } = data.data
+  const { lawyers, summary } = data.data
 
   return (
     <>
       <CToaster placement="top-end" className="mt-4">
-        {modified && (
+        {toastVisible && (
           <CToast
             autohide={true}
             color="success"
-            className="border-0 shadow-lg toast-slide-in"
+            className="border-0 shadow-lg"
             visible={true}
             style={{
               background: 'linear-gradient(135deg, #4CAF50, #45a049)',
               color: '#fff',
               borderRadius: '0.75rem',
-              padding: '0rem 1rem 0rem 1rem',
               minWidth: '320px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             }}
           >
             <div className="d-flex align-items-center">
-              <FaCheckCircle size={24} className="me-3" style={{ color: '#fff' }} />
-              <CToastBody className="fw-semibold flex-grow-1">
-                {toastMessage || 'Operation completed successfully!'}
-              </CToastBody>
+              <FaCheckCircle size={24} className="me-3" />
+              <CToastBody className="fw-semibold flex-grow-1">{toastMessage}</CToastBody>
               <CToastClose className="ms-3 m-auto" style={{ color: '#fff', opacity: 0.8 }} />
             </div>
           </CToast>
         )}
       </CToaster>
-      <CCard className="mb-4 p-3">
-        <CRow className="justify-content-center">
-          <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
-            <CWidgetStatsC
-              icon={<CIcon icon={cilPeople} height={36} />}
-              value={summary?.total_lawyers?.toString()}
-              title="Total Pending Lawyers"
-              progress={{ color: 'warning', value: 75 }}
-            />
-          </CCol>
-          <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
-            <CWidgetStatsC
-              icon={<CIcon icon={cilUserFollow} height={36} />}
-              value={summary?.new_lawyers_this_month?.toString()}
-              title="New Pending Lawyers (This Month)"
-              progress={{ color: 'warning', value: 75 }}
-            />
-          </CCol>
-        </CRow>
-      </CCard>
 
+      {/* Add Button */}
       <CCardBody>
         <CRow className="align-items-center mb-3">
           <CCol xs={12} md={6}>
@@ -253,8 +201,41 @@ const Registration = () => {
           </CCol>
         </CRow>
       </CCardBody>
+      {/* Tabs */}
 
+      {/* Summary */}
+      <CCard className="mb-4 p-3">
+        <CRow className="justify-content-center">
+          <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
+            <CWidgetStatsC
+              icon={<CIcon icon={cilPeople} height={36} />}
+              value={summary?.total_lawyers?.toString()}
+              title={`Total ${tabs.find((t) => t.key === activeTab)?.label}`}
+              progress={{ color: 'warning', value: 75 }}
+            />
+          </CCol>
+          <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
+            <CWidgetStatsC
+              icon={<CIcon icon={cilUserFollow} height={36} />}
+              value={summary?.new_lawyers_this_month?.toString()}
+              title={`New ${tabs.find((t) => t.key === activeTab)?.label} (This Month)`}
+              progress={{ color: 'warning', value: 75 }}
+            />
+          </CCol>
+        </CRow>
+      </CCard>
+
+      {/* Table */}
       <CCard className="mb-4">
+        <CNav variant="tabs" className="mb-4">
+          {tabs.map((tab, idx) => (
+            <CNavItem key={idx}>
+              <CNavLink active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
+                {tab.label}
+              </CNavLink>
+            </CNavItem>
+          ))}
+        </CNav>
         <CTable align="middle" className="mb-0 border" hover responsive>
           <CTableHead className="text-nowrap">
             <CTableRow>
@@ -270,7 +251,10 @@ const Registration = () => {
           </CTableHead>
           <CTableBody>
             {lawyers.map((lawyer) => (
-              <CTableRow key={lawyer._id}>
+              <CTableRow
+                key={lawyer._id}
+                onClick={() => navigate(`/registration/view/${lawyer._id}`, { state: { lawyer } })}
+              >
                 <CTableDataCell className="text-center">
                   {lawyer?._id?.slice(-5)?.toUpperCase()}
                 </CTableDataCell>
@@ -287,22 +271,8 @@ const Registration = () => {
                 <CTableDataCell className="text-center">{`${lawyer?.age} / ${lawyer?.gender_id?.name}`}</CTableDataCell>
                 <CTableDataCell className="text-center">
                   <CDropdown alignment="end">
-                    <CDropdownToggle
-                      color="transparent"
-                      size="sm"
-                      caret={false}
-                      className="p-0 border-0 shadow-none"
-                    >
-                      <span
-                        style={{
-                          fontSize: '24px',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          marginLeft: '30px',
-                        }}
-                      >
-                        ⋮
-                      </span>
+                    <CDropdownToggle color="transparent" size="sm" className="p-0 shadow-none">
+                      <span style={{ fontSize: '24px', cursor: 'pointer' }}>⋮</span>
                     </CDropdownToggle>
                     <CDropdownMenu>
                       <CDropdownItem
@@ -329,15 +299,24 @@ const Registration = () => {
             ))}
           </CTableBody>
         </CTable>
+
+        {/* Pagination */}
         <CPagination align="end" className="mt-3 me-3">
           <CPaginationItem
             aria-label="Previous"
             disabled={currentPage === 1}
             onClick={() => handlePageChange(currentPage - 1)}
           >
-            <span aria-hidden="true">&laquo;</span>
+            &laquo;
           </CPaginationItem>
           {renderPaginationItems()}
+          <CPaginationItem
+            aria-label="Next"
+            disabled={currentPage === (data?.data?.pagination?.totalPages || 1)}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            &raquo;
+          </CPaginationItem>
         </CPagination>
       </CCard>
     </>

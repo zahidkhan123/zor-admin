@@ -26,7 +26,7 @@ const UserView = React.lazy(() => import('./views/users/ViewUser'))
   /*Registration Request routes */
 }
 const RegistrationRequests = React.lazy(() => import('./views/lawyers/registrations/lawyers'))
-
+const RegistrationView = React.lazy(() => import('./views/lawyers/registrations/ViewLawyer'))
 {
   /*Verification routes */
 }
@@ -101,6 +101,7 @@ const App = () => {
             <Route path="users/view/:id" element={<UserView />} />
             {/* Registration Request routes */}
             <Route path="registration" element={<RegistrationRequests />} />
+            <Route path="registration/view/:id" element={<RegistrationView />} />
             {/* Verification routes */}
             <Route path="verification" element={<Verification />} />
             <Route path="verification/detail/:id" element={<VerificationDetail />} />

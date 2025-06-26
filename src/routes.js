@@ -14,6 +14,7 @@ const UserView = React.lazy(() => import('./views/users/ViewUser'))
   /*Registration Request routes */
 }
 const RegistrationRequests = React.lazy(() => import('./views/lawyers/registrations/lawyers'))
+const RegistrationView = React.lazy(() => import('./views/lawyers/registrations/ViewLawyer'))
 // const UserEdit = React.lazy(() => import('./views/users/EditUser'))
 // const UserView = React.lazy(() => import('./views/users/ViewUser'))
 
@@ -49,6 +50,7 @@ const routes = [
   { path: '/users/view/:id', name: 'View User', element: UserView },
 
   { path: '/registration', name: 'Registration Requests', element: RegistrationRequests },
+  { path: '/registration/view/:id', name: 'View Registration', element: RegistrationView },
 
   { path: '/lawyers', name: 'Lawyers', element: AllLawyer },
   { path: '/lawyers/add', name: 'Add Lawyer', element: LawyerProfileForm },

@@ -19,35 +19,86 @@ import {
   CBadge,
   CSpinner,
 } from '@coreui/react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { FaEye } from 'react-icons/fa'
-import { useGetPendingSubmissionsQuery, useGetVerificationQuery } from 'src/services/api'
+import {
+  useGetPendingSubmissionsQuery,
+  useGetVerificationQuery,
+  useGetFlaggedLawyersQuery,
+} from 'src/services/api'
 
 const Tabs = ({ path }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [activeKey, setActiveKey] = useState(1)
   const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 })
+  const [refreshTrigger, setRefreshTrigger] = useState(0) // Add this line
 
-  const { data: pendingData, isLoading: loadingPending } = useGetPendingSubmissionsQuery(
-    queryParams,
+  // Add refreshTrigger to all query dependencies
+  const {
+    data: pendingData,
+    isLoading: loadingPending,
+    refetch: refetchPending,
+  } = useGetPendingSubmissionsQuery(
+    { ...queryParams, refreshTrigger }, // Include refreshTrigger here
     { skip: activeKey !== 1 },
   )
-  const { data: pendingVerification, isLoading: loadingVerification } = useGetVerificationQuery(
-    { ...queryParams, status: 'Pending' },
+
+  const {
+    data: pendingVerification,
+    isLoading: loadingVerification,
+    refetch: refetchVerification,
+  } = useGetVerificationQuery(
+    { ...queryParams, status: 'Pending', refreshTrigger }, // And here
     { skip: activeKey !== 2 },
   )
-  const { data: rejectedVerification, isLoading: loadingRejected } = useGetVerificationQuery(
-    { ...queryParams, status: 'Rejected' },
+
+  const {
+    data: rejectedVerification,
+    isLoading: loadingRejected,
+    refetch: refetchRejected,
+  } = useGetVerificationQuery(
+    { ...queryParams, status: 'Rejected', refreshTrigger }, // And here
     { skip: activeKey !== 3 },
   )
-  const { data: oldVerification, isLoading: loadingOldVerification } = useGetVerificationQuery(
-    { ...queryParams, status: 'Old' },
+
+  const {
+    data: oldVerification,
+    isLoading: loadingOldVerification,
+    refetch: refetchOldVerification,
+  } = useGetVerificationQuery(
+    { ...queryParams, status: 'Old', refreshTrigger }, // And here
     { skip: activeKey !== 4 },
   )
-  const { data: spamVerification, isLoading: loadingSpamVerification } = useGetVerificationQuery(
-    { ...queryParams, status: 'Spam' },
+
+  const {
+    data: spamVerification,
+    isLoading: loadingSpamVerification,
+    refetch: refetchSpamVerification,
+  } = useGetFlaggedLawyersQuery(
+    { ...queryParams, refreshTrigger }, // And here
     { skip: activeKey !== 5 },
   )
+
+  // Add this useEffect for handling refresh
+  useEffect(() => {
+    if (location.state?.refresh) {
+      // Force remount by changing key
+      setRefreshTrigger((prev) => prev + 1)
+      // Clear state
+      navigate(location.pathname, { replace: true, state: {} })
+
+      // Also trigger manual refetch for the current tab
+      const refetchFunctions = {
+        1: refetchPending,
+        2: refetchVerification,
+        3: refetchRejected,
+        4: refetchOldVerification,
+        5: refetchSpamVerification,
+      }
+      refetchFunctions[activeKey]?.()
+    }
+  }, [location.state, activeKey, navigate, location.pathname])
 
   const isLoading =
     (activeKey === 1 && loadingPending) ||
@@ -70,9 +121,6 @@ const Tabs = ({ path }) => {
   useEffect(() => {
     setQueryParams((prev) => ({ ...prev, page: 1 }))
   }, [activeKey])
-
-  // console.log(tableData)
-
   if (isLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '60vh' }}>
@@ -163,10 +211,13 @@ const Tabs = ({ path }) => {
                                   ? 'warning'
                                   : item.verification_status === 'Rejected'
                                     ? 'danger'
-                                    : 'secondary'
+                                    : item.status === 'rejected'
+                                      ? 'danger'
+                                      : 'secondary'
                             }
                           >
-                            {item.verification_status || 'Not Started'}
+                            {item.verification_status ||
+                              (item.status === 'rejected' ? 'Flagged' : 'Not Started')}
                           </CBadge>
                         </CTableDataCell>
                         <CTableDataCell className="text-center">
