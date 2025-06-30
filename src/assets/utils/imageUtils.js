@@ -1,5 +1,5 @@
-// const IMAGE_BASE_URL = 'http://localhost:3000/api/v1/getFile?key='
-const IMAGE_BASE_URL = 'https://zor-development.onrender.com/api/v1/getFile?key='
+const IMAGE_BASE_URL = 'http://localhost:3000/api/v1/getFile?key='
+// const IMAGE_BASE_URL = 'https://zor-development.onrender.com/api/v1/getFile?key='
 export const fetchSignedUrl = async (key) => {
   try {
     const res = await fetch(`${IMAGE_BASE_URL}${key}`)

@@ -246,7 +246,7 @@ const AllLawyer = () => {
           </CRow>
         </CCard>
 
-        <CCardBody>
+        {/* <CCardBody>
           <CRow className="align-items-center mb-3">
             <CCol xs={12} md={6}>
               <CButton
@@ -258,7 +258,7 @@ const AllLawyer = () => {
               </CButton>
             </CCol>
           </CRow>
-        </CCardBody>
+        </CCardBody> */}
 
         <CCard className="mb-4">
           <CTable align="middle" className="mb-0 border" hover responsive>
@@ -281,7 +281,7 @@ const AllLawyer = () => {
               {lawyers.map((lawyer) => (
                 <CTableRow
                   key={lawyer._id}
-                  onClick={() => navigate(`/lawyers/view/${lawyer._id}`, { state: { lawyer } })}
+                  onClick={() => navigate(`/profile/edit/${lawyer._id}`, { state: { lawyer } })}
                 >
                   <CTableDataCell className="text-center">
                     {lawyer?._id?.slice(-5)?.toUpperCase()}

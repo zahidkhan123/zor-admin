@@ -11,7 +11,7 @@ const getToken = () => {
 
 // Create axios instance
 const axiosInstance = axios.create({
-  baseURL: 'https://zor-development.onrender.com/api/v1',
+  baseURL: 'http://localhost:3000/api/v1',
   headers: {
     Authorization: `Bearer ${getToken()}`,
   },
@@ -148,6 +148,28 @@ export const api = createApi({
         method: 'GET',
       }),
     }),
+    getFeeandlocation: builder.query({
+      query: (id) => ({
+        url: `/admin/lawyers/${id}/fee-and-location`,
+        method: 'GET',
+      }),
+    }),
+    updateFeeandlocation: builder.mutation({
+      query: ({ id, payload }) => {
+        console.log('updateFeeandlocation called with id:', id, 'and payload:', payload)
+        return {
+          url: `/admin/lawyers/${id}/fee-and-location`,
+          method: 'POST',
+          body: payload,
+        }
+      },
+    }),
+    getCities: builder.query({
+      query: () => ({
+        url: '/admin/dropdowns?type=City',
+        method: 'GET',
+      }),
+    }),
   }),
 })
 
@@ -170,4 +192,7 @@ export const {
   useCreateUserMutation,
   useFlagLawyerMutation,
   useGetFlaggedLawyersQuery,
+  useGetFeeandlocationQuery,
+  useUpdateFeeandlocationMutation,
+  useGetCitiesQuery,
 } = api

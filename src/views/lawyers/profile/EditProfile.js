@@ -15,10 +15,21 @@ import {
   CDropdownMenu,
   CFormCheck,
   CBadge,
+  CToaster,
+  CToast,
+  CToastHeader,
+  CToastBody,
 } from '@coreui/react'
+import { CFormLabel, CFormTextarea } from '@coreui/react'
 import { cilMap, cilPencil, cilPlus, cilX, cilUser } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
-import { useGetCategoriesQuery, useGetLawyerByIdQuery } from '../../../services/api.js'
+import {
+  useGetCategoriesQuery,
+  useGetLawyerByIdQuery,
+  useGetFeeandlocationQuery,
+  useGetCitiesQuery,
+  useUpdateFeeandlocationMutation,
+} from '../../../services/api.js'
 import { useParams } from 'react-router-dom'
 import { fetchSignedUrl, fetchMultipleSignedUrls } from '../../../assets/utils/imageUtils'
 
@@ -77,28 +88,29 @@ const ListSection = ({ title, placeholder, items, onAdd, onRemove }) => {
   )
 }
 
-const renderLocationCard = (title, address) => (
-  <CCard className="mb-4">
-    <CCardHeader>
-      <h6 className="mb-0">{title}</h6>
-    </CCardHeader>
-    <CCardBody className="d-flex justify-content-between align-items-center">
-      <span className="text-secondary">{address}</span>
-      <CButton color="secondary" size="sm">
-        <CIcon icon={cilMap} className="me-1" />
-        View on map
-      </CButton>
-    </CCardBody>
-  </CCard>
-)
+// Updated location and fee types to match API response
+const LOCATION_TYPES = {
+  HOME: 'Home Location',
+  PERSONAL_OFFICE: 'Personal Office Location',
+  CHAMBER: 'Chamber Location',
+  OFFICE: 'Office Location',
+  ONLINE: 'Online Location',
+}
+
+const FEE_TYPES = {
+  ONLINE: 'Online Consultation',
+  CHAMBER: 'Chamber Office',
+  OFFICE: 'Office',
+  HOME: 'Home Office',
+}
 
 const EditProfile = () => {
   const { id } = useParams()
   const { data: categoriesData } = useGetCategoriesQuery()
   const { data: lawyerData } = useGetLawyerByIdQuery(id, { skip: !id })
-
-  const address = '1276 Fifth Ave Ste 704 PMB 170, New York, NY 10001'
-
+  const { data: citiesData } = useGetCitiesQuery()
+  const { data: feesandlocationData } = useGetFeeandlocationQuery(id, { skip: !id })
+  const [updateFeeandlocation] = useUpdateFeeandlocationMutation()
   const [name, setName] = useState('')
   const [category, setCategory] = useState([])
   const [selectedCategories, setSelectedCategories] = useState([])
@@ -120,12 +132,25 @@ const EditProfile = () => {
   const [court, setCourt] = useState('')
   const [link, setLink] = useState('')
 
-  const [homeOfficeFee, setHomeOfficeFee] = useState('')
-  const [chamberOfficeFee, setChamberOfficeFee] = useState('')
-  const [personalOfficeFee, setPersonalOfficeFee] = useState('')
-  const [onlineFee, setOnlineFee] = useState('')
   const [profileImage, setProfileImage] = useState('')
   const [certificateList, setCertificateList] = useState([])
+
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+
+  // For new API: locations is an array, not an object
+  const [locations, setLocations] = useState([])
+
+  // For new API: city is a city_id string
+  const [selectedCity, setSelectedCity] = useState('')
+
+  // Fees state, now includes 'office'
+  const [fees, setFees] = useState({
+    online: '',
+    chamber: '',
+    home: '',
+    office: '',
+  })
 
   useEffect(() => {
     if (lawyerData?.data?.lawyer?.user?.image) {
@@ -154,29 +179,6 @@ const EditProfile = () => {
 
     fetchCertificates()
   }, [lawyerData?.data?.lawyer?.certificates])
-
-  // useEffect(() => {
-  //   if (lawyerData?.data?.lawyer) {
-  //     const l = lawyerData.data.lawyer
-  //     setName(l.user.name || '')
-  //     const categories = Array.isArray(l.categories) ? l.categories : []
-  //     setCategory(categories.map((c) => c._id))
-  //     setSelectedCategories(categories)
-  //     setSpecializations(
-  //       Array.isArray(l.specializations) ? l.specializations.map((s) => s.name) : [],
-  //     )
-  //     setServices(Array.isArray(l.services) ? l.services.map((s) => s.name) : [])
-  //     setExperience(Array.isArray(l.experience) ? l.experience.map((e) => e.name) : [])
-  //     setCases(
-  //       l.renouncedCases?.map(
-  //         (c) => `${c.caseTitle}, ${c.caseYear}, ${c.courtLicense}, ${c.caseLink}`,
-  //       ) || [],
-  //     )
-  //     setLanguages(Array.isArray(l.languages) ? l.languages.map((l) => l.name) : [])
-  //     setMemberships(Array.isArray(l.memberships) ? l.memberships.map((m) => m.name) : [])
-  //     setEducationList(Array.isArray(l.education) ? l.education.map((e) => e.name) : [])
-  //   }
-  // }, [lawyerData])
 
   useEffect(() => {
     if (lawyerData?.data?.lawyer) {
@@ -270,7 +272,32 @@ const EditProfile = () => {
           : [],
       )
     }
-  }, [lawyerData])
+
+    // Map new API response for fee and location
+    if (feesandlocationData?.data) {
+      // Map city from first location with city_id, if available
+      const locationsArr = Array.isArray(feesandlocationData.data.location)
+        ? feesandlocationData.data.location
+        : []
+
+      // Find first location with city_id for selectedCity
+      const cityLocation = locationsArr.find((loc) => loc.city_id)
+      setSelectedCity(cityLocation?.city_id || '')
+
+      // Set locations as array (for editing)
+      setLocations(locationsArr)
+
+      // Map fees
+      if (feesandlocationData.data.fee) {
+        setFees({
+          online: feesandlocationData.data.fee.online || '',
+          chamber: feesandlocationData.data.fee.chamber || '',
+          home: feesandlocationData.data.fee.home || '',
+          office: feesandlocationData.data.fee.office || '',
+        })
+      }
+    }
+  }, [lawyerData, feesandlocationData])
 
   useEffect(() => {
     if (lawyerData?.data?.lawyer?.categories) {
@@ -315,17 +342,12 @@ const EditProfile = () => {
   }
 
   const handleRemoveEducation = (index) => {
-    debugger
     const updated = [...educationList]
-    debugger
     if (updated[index]._id) {
-      debugger
       updated[index].isDeleted = true
       setEducationList(updated)
     } else {
-      debugger
       updated.splice(index, 1)
-      debugger
       setEducationList(updated)
     }
   }
@@ -347,17 +369,30 @@ const EditProfile = () => {
     }
   }
   const handleRemoveCase = (index) => {
-    debugger
     const updated = [...cases]
     if (updated[index]?._id) {
-      debugger
       updated[index].isDeleted = true
     } else {
-      debugger
       updated.splice(index, 1)
     }
-    debugger
     setCases(updated)
+  }
+
+  // Location handlers for array of locations
+  const handleLocationChange = (location_id, field, value) => {
+    setLocations((prev) =>
+      prev.map((loc) => (loc.location_id === location_id ? { ...loc, [field]: value } : loc)),
+    )
+  }
+
+  // Fee handlers
+  const handleFeeChange = (feeType, value) => {
+    if (value === '' || parseInt(value) > 0) {
+      setFees((prev) => ({
+        ...prev,
+        [feeType]: value,
+      }))
+    }
   }
 
   const handleSave = () => {
@@ -430,12 +465,67 @@ const EditProfile = () => {
         })),
       }),
     }
-    debugger
-    console.log('Saving Profile:', payload)
-    alert('Profile saved! (see console for payload)')
+
+    handleSaveLocationsAndFees()
   }
+
+  const handleSaveLocationsAndFees = async () => {
+    const payload = {
+      lawyer_locations: locations
+        .filter(
+          (loc) => loc.location_id && loc.location_id.toLowerCase() !== 'online' && loc.city_id,
+        )
+        .map((loc) => ({
+          location_id: loc.location_id,
+          city_id: loc.city_id,
+          address: loc.address,
+          directionNotes: loc.directionNotes,
+        })),
+      lawyer_fee: {
+        online: fees.online ? parseInt(fees.online) : 0,
+        chamber: fees.chamber ? parseInt(fees.chamber) : 0,
+        office: fees.office ? parseInt(fees.office) : 0,
+        home: fees.home ? parseInt(fees.home) : 0,
+      },
+    }
+    const res = await updateFeeandlocation({ id, payload })
+    if (res?.data?.success) {
+      setToastMessage('Locations and fees updated successfully!')
+      setToastVisible(true)
+    } else {
+      setToastMessage('Failed to update locations and fees')
+      setToastVisible(true)
+    }
+  }
+
+  // Helper for city dropdown options
+  const cityOptions = [
+    { label: 'Select your city', value: '' },
+    ...(citiesData?.data
+      ? citiesData.data.map((city) => ({
+          label: city.name,
+          value: city._id,
+        }))
+      : []),
+  ]
+
   return (
     <CContainer className="py-4">
+      <CToaster position="top-end" className="mt-4">
+        {toastVisible && (
+          <CToast
+            autohide={true}
+            visible={true}
+            color="success"
+            onClose={() => setToastVisible(false)}
+          >
+            <CToastHeader closeButton>
+              <strong className="me-auto">Success</strong>
+            </CToastHeader>
+            <CToastBody>{toastMessage}</CToastBody>
+          </CToast>
+        )}
+      </CToaster>
       <CCard>
         <CCardHeader className="bg-warning text-white">
           <h4 className="mb-0">Lawyer Profile</h4>
@@ -551,87 +641,6 @@ const EditProfile = () => {
               </CRow>
             </CCol>
           </CRow>
-
-          <CCard className="mb-4">
-            <CCardHeader className="bg-warning text-white">
-              <h5 className="mb-0">Locations</h5>
-            </CCardHeader>
-            <CCardBody>
-              <CRow>
-                {['Home Office', 'Chamber Office', 'Personal Office'].map((loc, index) => (
-                  <CCol md={6} key={index}>
-                    {renderLocationCard(loc, address)}
-                  </CCol>
-                ))}
-              </CRow>
-            </CCardBody>
-          </CCard>
-
-          <CCard className="mb-4">
-            <CCardHeader className="bg-warning text-white">
-              <h5 className="mb-0">Fee</h5>
-            </CCardHeader>
-            <CCardBody>
-              <CRow className="g-3">
-                <CCol md={3}>
-                  <CFormInput
-                    type="number"
-                    min="1"
-                    placeholder="Home Office Fee"
-                    value={homeOfficeFee}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      if (value === '' || parseInt(value) > 0) {
-                        setHomeOfficeFee(value)
-                      }
-                    }}
-                  />
-                </CCol>
-                <CCol md={3}>
-                  <CFormInput
-                    type="number"
-                    min="1"
-                    placeholder="Chamber Office Fee"
-                    value={chamberOfficeFee}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      if (value === '' || parseInt(value) > 0) {
-                        setChamberOfficeFee(value)
-                      }
-                    }}
-                  />
-                </CCol>
-                <CCol md={3}>
-                  <CFormInput
-                    type="number"
-                    min="1"
-                    placeholder="Personal Office Fee"
-                    value={personalOfficeFee}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      if (value === '' || parseInt(value) > 0) {
-                        setPersonalOfficeFee(value)
-                      }
-                    }}
-                  />
-                </CCol>
-                <CCol md={3}>
-                  <CFormInput
-                    type="number"
-                    min="1"
-                    placeholder="Online Fee"
-                    value={onlineFee}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      if (value === '' || parseInt(value) > 0) {
-                        setOnlineFee(value)
-                      }
-                    }}
-                  />
-                </CCol>
-              </CRow>
-            </CCardBody>
-          </CCard>
 
           <ListSection
             title="Specialization"
@@ -849,9 +858,102 @@ const EditProfile = () => {
             </CCardBody>
           </CCard>
 
-          <div className="text-end">
+          <div className="text-end mt-4 mb-4">
             <CButton color="warning" onClick={handleSave}>
               Save Profile
+            </CButton>
+          </div>
+
+          {/* Locations Section */}
+          <CCard className="mb-4">
+            <CCardHeader className="bg-light">
+              <h5 className="mb-0">Locations</h5>
+            </CCardHeader>
+            <CCardBody>
+              <CRow className="mb-3">
+                <CCol md={4}>
+                  <CFormLabel>City</CFormLabel>
+                  <CFormSelect
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                    options={cityOptions}
+                  />
+                </CCol>
+              </CRow>
+
+              {/* Render locations from array */}
+              {locations.map((loc) => (
+                <div key={loc.location_id} className="mb-4">
+                  <h6>
+                    {loc.type === 'Office'
+                      ? 'Personal Office Location'
+                      : loc.type === 'Chamber'
+                        ? 'Chamber Location'
+                        : loc.type === 'Home'
+                          ? 'Home Location'
+                          : loc.type === 'Online'
+                            ? 'Online Location'
+                            : loc.type}
+                  </h6>
+                  <CFormLabel>Address</CFormLabel>
+                  <CFormInput
+                    value={loc.address || ''}
+                    onChange={(e) =>
+                      handleLocationChange(loc.location_id, 'address', e.target.value)
+                    }
+                    placeholder="123 Maple Street, Springfield, IL 62704"
+                    className="mb-2"
+                  />
+                  <CFormLabel>Directional Note</CFormLabel>
+                  <CFormTextarea
+                    rows={2}
+                    placeholder="Head east on Maple Avenue, take a left..."
+                    value={loc.directionNotes || ''}
+                    onChange={(e) =>
+                      handleLocationChange(loc.location_id, 'directionNotes', e.target.value)
+                    }
+                  />
+                </div>
+              ))}
+            </CCardBody>
+          </CCard>
+
+          {/* Fees Section */}
+          <CCard>
+            <CCardHeader className="bg-white border-bottom">
+              <h5 className="mb-0">Fees</h5>
+            </CCardHeader>
+            <CCardBody>
+              <CRow className="g-3 d-flex flex-column justify-content-between">
+                {Object.entries(FEE_TYPES).map(([key, label]) => {
+                  const feeKey = key.toLowerCase()
+                  return (
+                    <CCol md={6} key={key}>
+                      <div className="d-flex align-items-baseline">
+                        <CFormLabel
+                          className="me-3 mb-0"
+                          style={{ whiteSpace: 'nowrap', minWidth: '200px' }}
+                        >
+                          {label} Fee
+                        </CFormLabel>
+                        <CFormInput
+                          type="number"
+                          min="1"
+                          placeholder={`${label} Fee`}
+                          value={fees[feeKey]}
+                          onChange={(e) => handleFeeChange(feeKey, e.target.value)}
+                        />
+                      </div>
+                    </CCol>
+                  )
+                })}
+              </CRow>
+            </CCardBody>
+          </CCard>
+
+          <div className="text-end mt-4">
+            <CButton color="warning" onClick={handleSaveLocationsAndFees}>
+              Save Locations & Fees
             </CButton>
           </div>
         </CCardBody>
