@@ -104,6 +104,14 @@ const FEE_TYPES = {
   HOME: 'Home Office',
 }
 
+// Define all possible location types for mapping, even if empty
+const ALL_LOCATION_TYPES = [
+  { type: 'Home', label: 'Home Location' },
+  { type: 'Office', label: 'Personal Office Location' },
+  { type: 'Chamber', label: 'Chamber Location' },
+  // { type: 'Online', label: 'Online Location' }, // Exclude online if not needed
+]
+
 const EditProfile = () => {
   const { id } = useParams()
   const { data: categoriesData } = useGetCategoriesQuery()
@@ -273,6 +281,8 @@ const EditProfile = () => {
       )
     }
 
+    debugger
+
     // Map new API response for fee and location
     if (feesandlocationData?.data) {
       // Map city from first location with city_id, if available
@@ -280,12 +290,36 @@ const EditProfile = () => {
         ? feesandlocationData.data.location
         : []
 
+      // Filter out 'online' locations
+      const filteredLocations = locationsArr.filter(
+        (loc) => loc.type !== 'online' && loc.city_id !== null,
+      )
+
       // Find first location with city_id for selectedCity
-      const cityLocation = locationsArr.find((loc) => loc.city_id)
+      const cityLocation = filteredLocations.find((loc) => loc.city_id)
       setSelectedCity(cityLocation?.city_id || '')
 
-      // Set locations as array (for editing)
-      setLocations(locationsArr)
+      // --- Begin: Always map all location types, even if empty ---
+      // For each type in ALL_LOCATION_TYPES, find the location or create an empty one
+      const mappedLocations = ALL_LOCATION_TYPES.map((locType) => {
+        // Try to find a location of this type
+        const found = filteredLocations.find(
+          (loc) => (loc.type || '').toLowerCase() === locType.type.toLowerCase(),
+        )
+        if (found) {
+          return found
+        }
+        // If not found, return an empty location object for this type
+        return {
+          location_id: `${locType.type.toLowerCase()}-empty`,
+          type: locType.type,
+          city_id: selectedCity || '',
+          address: '',
+          directionNotes: '',
+        }
+      })
+      setLocations(mappedLocations)
+      // --- End: Always map all location types, even if empty ---
 
       // Map fees
       if (feesandlocationData.data.fee) {
@@ -296,6 +330,16 @@ const EditProfile = () => {
           office: feesandlocationData.data.fee.office || '',
         })
       }
+    } else {
+      // If no data, still map all location types as empty
+      const mappedLocations = ALL_LOCATION_TYPES.map((locType) => ({
+        location_id: `${locType.type.toLowerCase()}-empty`,
+        type: locType.type,
+        city_id: selectedCity || '',
+        address: '',
+        directionNotes: '',
+      }))
+      setLocations(mappedLocations)
     }
   }, [lawyerData, feesandlocationData])
 
@@ -470,17 +514,22 @@ const EditProfile = () => {
   }
 
   const handleSaveLocationsAndFees = async () => {
+    // Only include locations that have a city_id and are not online
+    const filteredLocations = locations.filter(
+      (loc) =>
+        loc.type &&
+        loc.type.toLowerCase() !== 'online' &&
+        loc.city_id &&
+        loc.address !== undefined &&
+        loc.directionNotes !== undefined,
+    )
     const payload = {
-      lawyer_locations: locations
-        .filter(
-          (loc) => loc.location_id && loc.location_id.toLowerCase() !== 'online' && loc.city_id,
-        )
-        .map((loc) => ({
-          location_id: loc.location_id,
-          city_id: loc.city_id,
-          address: loc.address,
-          directionNotes: loc.directionNotes,
-        })),
+      lawyer_locations: filteredLocations.map((loc) => ({
+        location_id: loc.location_id,
+        city_id: loc.city_id,
+        address: loc.address,
+        directionNotes: loc.directionNotes,
+      })),
       lawyer_fee: {
         online: fees.online ? parseInt(fees.online) : 0,
         chamber: fees.chamber ? parseInt(fees.chamber) : 0,

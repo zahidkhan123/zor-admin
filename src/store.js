@@ -3,6 +3,7 @@ import { api } from './services/api'
 
 const initialState = {
   sidebarShow: true,
+  sidebarUnfoldable: false,
   theme: 'light',
   isAuthenticated: false,
 }

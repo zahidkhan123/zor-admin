@@ -213,7 +213,6 @@ const LawyerVerification = () => {
   const hasChanges = () => {
     const mapStatus = (status) =>
       status === 'approved' ? true : status === 'declined' ? false : undefined
-
     return (
       mapStatus(documentStatus.cnic.status) !== lawyer?.is_verified_cnic ||
       mapStatus(documentStatus.provisional_bar.status) !== lawyer?.provisional_bar?.is_verified ||
@@ -457,7 +456,7 @@ const LawyerVerification = () => {
             </div>
           ) : (
             <div className="d-flex justify-content-end mt-4">
-              <CButton color="success" onClick={handleSave} disabled={!hasChanges()}>
+              <CButton color="success" onClick={handleSave}>
                 Save
               </CButton>
             </div>

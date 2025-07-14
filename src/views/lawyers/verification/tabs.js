@@ -32,24 +32,20 @@ const Tabs = ({ path }) => {
   const location = useLocation()
   const [activeKey, setActiveKey] = useState(1)
   const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 })
-  const [refreshTrigger, setRefreshTrigger] = useState(0) // Add this line
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  // Add refreshTrigger to all query dependencies
   const {
     data: pendingData,
     isLoading: loadingPending,
     refetch: refetchPending,
-  } = useGetPendingSubmissionsQuery(
-    { ...queryParams, refreshTrigger }, // Include refreshTrigger here
-    { skip: activeKey !== 1 },
-  )
+  } = useGetPendingSubmissionsQuery({ ...queryParams, refreshTrigger }, { skip: activeKey !== 1 })
 
   const {
     data: pendingVerification,
     isLoading: loadingVerification,
     refetch: refetchVerification,
   } = useGetVerificationQuery(
-    { ...queryParams, status: 'Pending', refreshTrigger }, // And here
+    { ...queryParams, status: 'Pending', refreshTrigger },
     { skip: activeKey !== 2 },
   )
 
@@ -58,8 +54,17 @@ const Tabs = ({ path }) => {
     isLoading: loadingRejected,
     refetch: refetchRejected,
   } = useGetVerificationQuery(
-    { ...queryParams, status: 'Rejected', refreshTrigger }, // And here
+    { ...queryParams, status: 'Rejected', refreshTrigger },
     { skip: activeKey !== 3 },
+  )
+
+  const {
+    data: verifiedVerification,
+    isLoading: loadingVerifiedVerification,
+    refetch: refetchVerifiedVerification,
+  } = useGetVerificationQuery(
+    { ...queryParams, status: 'Verified', refreshTrigger },
+    { skip: activeKey !== 4 },
   )
 
   const {
@@ -67,34 +72,28 @@ const Tabs = ({ path }) => {
     isLoading: loadingOldVerification,
     refetch: refetchOldVerification,
   } = useGetVerificationQuery(
-    { ...queryParams, status: 'Old', refreshTrigger }, // And here
-    { skip: activeKey !== 4 },
+    { ...queryParams, status: 'Re-Submitted', refreshTrigger },
+    { skip: activeKey !== 5 },
   )
-
+  console.log(pendingData?.data?.totalPages)
   const {
     data: spamVerification,
     isLoading: loadingSpamVerification,
     refetch: refetchSpamVerification,
-  } = useGetFlaggedLawyersQuery(
-    { ...queryParams, refreshTrigger }, // And here
-    { skip: activeKey !== 5 },
-  )
+  } = useGetFlaggedLawyersQuery({ ...queryParams, refreshTrigger }, { skip: activeKey !== 6 })
 
-  // Add this useEffect for handling refresh
   useEffect(() => {
     if (location.state?.refresh) {
-      // Force remount by changing key
       setRefreshTrigger((prev) => prev + 1)
-      // Clear state
       navigate(location.pathname, { replace: true, state: {} })
 
-      // Also trigger manual refetch for the current tab
       const refetchFunctions = {
         1: refetchPending,
         2: refetchVerification,
         3: refetchRejected,
-        4: refetchOldVerification,
-        5: refetchSpamVerification,
+        4: refetchVerifiedVerification,
+        5: refetchOldVerification,
+        6: refetchSpamVerification,
       }
       refetchFunctions[activeKey]?.()
     }
@@ -104,8 +103,9 @@ const Tabs = ({ path }) => {
     (activeKey === 1 && loadingPending) ||
     (activeKey === 2 && loadingVerification) ||
     (activeKey === 3 && loadingRejected) ||
-    (activeKey === 4 && loadingOldVerification) ||
-    (activeKey === 5 && loadingSpamVerification)
+    (activeKey === 4 && loadingVerifiedVerification) ||
+    (activeKey === 5 && loadingOldVerification) ||
+    (activeKey === 6 && loadingSpamVerification)
 
   const tableData =
     activeKey === 1
@@ -115,18 +115,140 @@ const Tabs = ({ path }) => {
         : activeKey === 3
           ? rejectedVerification?.data?.results || []
           : activeKey === 4
-            ? oldVerification?.data?.results || []
-            : spamVerification?.data?.results || []
+            ? verifiedVerification?.data?.results || []
+            : activeKey === 5
+              ? oldVerification?.data?.results || []
+              : spamVerification?.data?.results || []
 
   useEffect(() => {
     setQueryParams((prev) => ({ ...prev, page: 1 }))
   }, [activeKey])
-  if (isLoading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: '60vh' }}>
-        <CSpinner color="warning" style={{ width: '4rem', height: '4rem' }} variant="grow" />
-      </div>
-    )
+
+  const getTotalPages = () => {
+    switch (activeKey) {
+      case 1:
+        return pendingData?.data?.totalPages || 0
+      case 2:
+        return pendingVerification?.data?.totalPages || 0
+      case 3:
+        return rejectedVerification?.data?.totalPages || 0
+      case 4:
+        return verifiedVerification?.data?.totalPages || 0
+      case 5:
+        return oldVerification?.data?.totalPages || 0
+      case 6:
+        return spamVerification?.data?.totalPages || 0
+      default:
+        return 0
+    }
+  }
+
+  const renderPaginationItems = () => {
+    const totalPages = getTotalPages()
+    const currentPage = queryParams.page
+    const items = []
+
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(
+          <CPaginationItem
+            key={i}
+            active={currentPage === i}
+            onClick={() => setQueryParams((prev) => ({ ...prev, page: i }))}
+          >
+            {i}
+          </CPaginationItem>,
+        )
+      }
+    } else {
+      items.push(
+        <CPaginationItem
+          key={1}
+          active={currentPage === 1}
+          onClick={() => setQueryParams((prev) => ({ ...prev, page: 1 }))}
+        >
+          1
+        </CPaginationItem>,
+      )
+
+      if (currentPage <= 4) {
+        for (let i = 2; i <= 5; i++) {
+          items.push(
+            <CPaginationItem
+              key={i}
+              active={currentPage === i}
+              onClick={() => setQueryParams((prev) => ({ ...prev, page: i }))}
+            >
+              {i}
+            </CPaginationItem>,
+          )
+        }
+        items.push(
+          <CPaginationItem key="ellipsis1" disabled>
+            ...
+          </CPaginationItem>,
+        )
+        items.push(
+          <CPaginationItem
+            key={totalPages}
+            active={currentPage === totalPages}
+            onClick={() => setQueryParams((prev) => ({ ...prev, page: totalPages }))}
+          >
+            {totalPages}
+          </CPaginationItem>,
+        )
+      } else if (currentPage >= totalPages - 3) {
+        items.push(
+          <CPaginationItem key="ellipsis1" disabled>
+            ...
+          </CPaginationItem>,
+        )
+        for (let i = totalPages - 4; i <= totalPages; i++) {
+          items.push(
+            <CPaginationItem
+              key={i}
+              active={currentPage === i}
+              onClick={() => setQueryParams((prev) => ({ ...prev, page: i }))}
+            >
+              {i}
+            </CPaginationItem>,
+          )
+        }
+      } else {
+        items.push(
+          <CPaginationItem key="ellipsis1" disabled>
+            ...
+          </CPaginationItem>,
+        )
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          items.push(
+            <CPaginationItem
+              key={i}
+              active={currentPage === i}
+              onClick={() => setQueryParams((prev) => ({ ...prev, page: i }))}
+            >
+              {i}
+            </CPaginationItem>,
+          )
+        }
+        items.push(
+          <CPaginationItem key="ellipsis2" disabled>
+            ...
+          </CPaginationItem>,
+        )
+        items.push(
+          <CPaginationItem
+            key={totalPages}
+            active={currentPage === totalPages}
+            onClick={() => setQueryParams((prev) => ({ ...prev, page: totalPages }))}
+          >
+            {totalPages}
+          </CPaginationItem>,
+        )
+      }
+    }
+
+    return items
   }
 
   const renderNoData = () => (
@@ -141,34 +263,26 @@ const Tabs = ({ path }) => {
     </CTableRow>
   )
 
+  if (isLoading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '60vh' }}>
+        <CSpinner color="warning" style={{ width: '4rem', height: '4rem' }} variant="grow" />
+      </div>
+    )
+  }
+
   return (
     <>
       <CNav variant="tabs" className="mb-4">
-        <CNavItem>
-          <CNavLink active={activeKey === 1} onClick={() => setActiveKey(1)}>
-            New Verifications
-          </CNavLink>
-        </CNavItem>
-        <CNavItem>
-          <CNavLink active={activeKey === 2} onClick={() => setActiveKey(2)}>
-            Pending
-          </CNavLink>
-        </CNavItem>
-        <CNavItem>
-          <CNavLink active={activeKey === 3} onClick={() => setActiveKey(3)}>
-            Rejected
-          </CNavLink>
-        </CNavItem>
-        <CNavItem>
-          <CNavLink active={activeKey === 4} onClick={() => setActiveKey(4)}>
-            Old Verifications
-          </CNavLink>
-        </CNavItem>
-        <CNavItem>
-          <CNavLink active={activeKey === 5} onClick={() => setActiveKey(5)}>
-            Spam
-          </CNavLink>
-        </CNavItem>
+        {['New Verifications', 'Pending', 'Rejected', 'Verified', 'Old Verifications', 'Spam'].map(
+          (label, idx) => (
+            <CNavItem key={idx}>
+              <CNavLink active={activeKey === idx + 1} onClick={() => setActiveKey(idx + 1)}>
+                {label}
+              </CNavLink>
+            </CNavItem>
+          ),
+        )}
       </CNav>
 
       <CTabContent>
@@ -241,37 +355,11 @@ const Tabs = ({ path }) => {
                   <span aria-hidden="true">&laquo;</span>
                 </CPaginationItem>
 
-                {Array.from({
-                  length:
-                    (activeKey === 1
-                      ? pendingData?.data?.totalPages
-                      : activeKey === 2
-                        ? pendingVerification?.data?.totalPages
-                        : activeKey === 3
-                          ? rejectedVerification?.data?.totalPages
-                          : oldVerification?.data?.totalPages) || 0,
-                }).map((_, i) => (
-                  <CPaginationItem
-                    key={i}
-                    active={queryParams.page === i + 1}
-                    onClick={() => setQueryParams((prev) => ({ ...prev, page: i + 1 }))}
-                  >
-                    {i + 1}
-                  </CPaginationItem>
-                ))}
+                {renderPaginationItems()}
 
                 <CPaginationItem
                   aria-label="Next"
-                  disabled={
-                    queryParams.page ===
-                    (activeKey === 1
-                      ? pendingData?.data?.totalPages
-                      : activeKey === 2
-                        ? pendingVerification?.data?.totalPages
-                        : activeKey === 3
-                          ? rejectedVerification?.data?.totalPages
-                          : oldVerification?.data?.totalPages)
-                  }
+                  disabled={queryParams.page === getTotalPages()}
                   onClick={() => setQueryParams((prev) => ({ ...prev, page: prev.page + 1 }))}
                 >
                   <span aria-hidden="true">&raquo;</span>
