@@ -239,7 +239,7 @@ const Registration = () => {
             </CButton>
           </CCol>
           <CCol xs={12} md={6} className="mb-2">
-            <div className="position-relative" style={{ maxWidth: '400px', float: 'right' }}>
+            {/* <div className="position-relative" style={{ maxWidth: '400px', float: 'right' }}>
               <CIcon
                 icon={cilSearch}
                 className="position-absolute"
@@ -252,7 +252,7 @@ const Registration = () => {
                 onChange={handleSearchChange}
                 className="ps-5"
               />
-            </div>
+            </div> */}
           </CCol>
         </CRow>
       </CCardBody>
