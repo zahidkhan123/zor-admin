@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   CRow,
   CCol,
@@ -38,6 +38,8 @@ const tabs = [
   { key: 'rejected', label: 'Rejected' },
 ]
 
+const PAGE_SIZE = 10 // Changed to match backend default
+
 const Registration = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -47,27 +49,27 @@ const Registration = () => {
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+
+  // Debounce search term to avoid too many API calls
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 500)
+
+    return () => {
+      clearTimeout(timerId)
+    }
+  }, [searchTerm])
 
   const { data, error, isLoading, refetch } = useGetLawyersQuery({
     page: currentPage,
-    limit: 100,
+    limit: PAGE_SIZE,
     type: activeTab,
+    search: debouncedSearchTerm,
   })
 
-  const paginatedLawyers = useMemo(() => {
-    if (!data?.data?.lawyers) return []
-
-    const term = searchTerm.toLowerCase()
-
-    return data.data.lawyers.filter((lawyer) => {
-      if (!searchTerm) return true
-      return (
-        lawyer.name?.toLowerCase().includes(term) ||
-        lawyer.phone?.toLowerCase().includes(term) ||
-        lawyer.email?.toLowerCase().includes(term)
-      )
-    })
-  }, [data, searchTerm])
+  const paginatedLawyers = data?.data?.lawyers || []
   const totalPages = data?.data?.pagination?.totalPages || 1
 
   useEffect(() => {
@@ -94,11 +96,13 @@ const Registration = () => {
     }
   }, [modified, location?.state?.tab, refetch])
 
+  // Reset to page 1 when tab or search term changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeTab, searchTerm])
+  }, [activeTab, debouncedSearchTerm])
 
   const handleSearchChange = (e) => {
+    console.log(e.target.value)
     setSearchTerm(e.target.value)
   }
 
@@ -239,11 +243,11 @@ const Registration = () => {
             </CButton>
           </CCol>
           <CCol xs={12} md={6} className="mb-2">
-            {/* <div className="position-relative" style={{ maxWidth: '400px', float: 'right' }}>
+            <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
               <CIcon
                 icon={cilSearch}
                 className="position-absolute"
-                style={{ top: '10px', left: '15px', zIndex: 10 }}
+                style={{ top: '17px', left: '15px', zIndex: 10 }}
               />
               <CFormInput
                 type="text"
@@ -251,8 +255,9 @@ const Registration = () => {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
               />
-            </div> */}
+            </div>
           </CCol>
         </CRow>
       </CCardBody>
@@ -317,14 +322,14 @@ const Registration = () => {
             ) : (
               <CTableRow>
                 <CTableDataCell colSpan={6} className="text-center py-4">
-                  {searchTerm ? 'No matching lawyers found.' : 'No lawyers found.'}
+                  {debouncedSearchTerm ? 'No matching lawyers found.' : 'No lawyers found.'}
                 </CTableDataCell>
               </CTableRow>
             )}
           </CTableBody>
         </CTable>
 
-        {paginatedLawyers.length > 0 && totalPages > 0 && (
+        {paginatedLawyers.length > 0 && totalPages > 1 && (
           <CPagination align="end" className="mt-3 me-3">
             <CPaginationItem
               aria-label="Previous"
