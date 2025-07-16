@@ -12,7 +12,7 @@ const getToken = () => {
 
 // Create axios instance
 const axiosInstance = axios.create({
-  baseURL: 'https://zor-development.onrender.com/api/v1',
+  baseURL: 'http://localhost:3000/api/v1',
   headers: {
     Authorization: `Bearer ${getToken()}`,
   },
@@ -67,9 +67,9 @@ export const api = createApi({
       }),
     }),
     getLawyers: builder.query({
-      query: ({ page = 1, limit = 10, type = null }) => ({
+      query: ({ page = 1, limit = 10, type = null, search = null }) => ({
         url: '/admin/lawyers',
-        params: { page, limit, ...(type && { type }) },
+        params: { page, limit, ...(type && { type }), ...(search && { search }) },
       }),
     }),
     createLawyer: builder.mutation({
