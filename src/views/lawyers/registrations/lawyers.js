@@ -1,4 +1,4 @@
-import React, { useEffect, useState, createRef } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import {
   CRow,
   CCol,
@@ -14,9 +14,6 @@ import {
   CPagination,
   CPaginationItem,
   CDropdown,
-  CDropdownToggle,
-  CDropdownMenu,
-  CDropdownItem,
   CButton,
   CSpinner,
   CToaster,
@@ -27,11 +24,12 @@ import {
   CNavItem,
   CNavLink,
   CWidgetStatsC,
+  CFormInput,
 } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
-import { cilPeople, cilUserFollow, cilPlus } from '@coreui/icons'
-import { useGetLawyersQuery, useUpdateLawyerMutation } from '../../../services/api'
+import { cilPeople, cilUserFollow, cilPlus, cilSearch } from '@coreui/icons'
+import { useGetLawyersQuery } from '../../../services/api'
 import { FaCheckCircle } from 'react-icons/fa'
 
 const tabs = [
@@ -44,22 +42,40 @@ const Registration = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { modified } = location.state || {}
-  const [updateLawyer, { isLoading: isUpdating, isSuccess: isUpdated }] = useUpdateLawyerMutation()
   const [activeTab, setActiveTab] = useState('pending')
   const [currentPage, setCurrentPage] = useState(1)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const { data, error, isLoading, refetch } = useGetLawyersQuery({
+    page: currentPage,
+    limit: 100,
+    type: activeTab,
+  })
+
+  const paginatedLawyers = useMemo(() => {
+    if (!data?.data?.lawyers) return []
+
+    const term = searchTerm.toLowerCase()
+
+    return data.data.lawyers.filter((lawyer) => {
+      if (!searchTerm) return true
+      return (
+        lawyer.name?.toLowerCase().includes(term) ||
+        lawyer.phone?.toLowerCase().includes(term) ||
+        lawyer.email?.toLowerCase().includes(term)
+      )
+    })
+  }, [data, searchTerm])
+  const totalPages = data?.data?.pagination?.totalPages || 1
+
   useEffect(() => {
     if (location?.state?.tab) {
       setActiveTab(location.state.tab)
       window.history.replaceState({}, document.title)
     }
   }, [location?.state?.tab])
-  const { data, error, isLoading, refetch } = useGetLawyersQuery({
-    page: currentPage,
-    limit: 10,
-    type: activeTab,
-  })
 
   useEffect(() => {
     if (location?.state?.lawyerAdded) {
@@ -71,26 +87,29 @@ const Registration = () => {
 
   useEffect(() => {
     if (modified || location?.state?.tab) {
-      refetch({ force: true }) // this ensures fresh data
+      refetch()
       setToastMessage('Lawyer updated successfully!')
       setToastVisible(true)
-
-      // Clear the navigation state to avoid repeated refetch
       window.history.replaceState({}, document.title)
     }
-  }, [modified, activeTab, refetch, location?.state?.tab])
+  }, [modified, location?.state?.tab, refetch])
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeTab])
+  }, [activeTab, searchTerm])
 
-  const handlePageChange = (page) => setCurrentPage(page)
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value)
+  }
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+  }
 
   const renderPaginationItems = () => {
-    const totalPages = data?.data?.pagination?.totalPages || 1
     const items = []
 
-    if (totalPages <= 1) return items
+    if (totalPages === 0) return items
 
     items.push(
       <CPaginationItem key={1} active={currentPage === 1} onClick={() => handlePageChange(1)}>
@@ -160,7 +179,7 @@ const Registration = () => {
     )
   }
 
-  const { lawyers, summary } = data.data
+  const { summary = {} } = data?.data || {}
 
   return (
     <>
@@ -187,23 +206,6 @@ const Registration = () => {
         )}
       </CToaster>
 
-      {/* Add Button */}
-      <CCardBody>
-        <CRow className="align-items-center mb-3">
-          <CCol xs={12} md={6}>
-            <CButton
-              color="warning"
-              onClick={() => navigate('/lawyers/add', { state: { mode: 'add' } })}
-            >
-              <CIcon icon={cilPlus} className="me-2" />
-              Add New Lawyer
-            </CButton>
-          </CCol>
-        </CRow>
-      </CCardBody>
-      {/* Tabs */}
-
-      {/* Summary */}
       <CCard className="mb-4 p-3">
         <CRow className="justify-content-center">
           <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
@@ -225,7 +227,36 @@ const Registration = () => {
         </CRow>
       </CCard>
 
-      {/* Table */}
+      <CCardBody>
+        <CRow className="align-items-center mb-3">
+          <CCol xs={12} md={6} className="mb-2">
+            <CButton
+              color="warning"
+              onClick={() => navigate('/lawyers/add', { state: { mode: 'add' } })}
+            >
+              <CIcon icon={cilPlus} className="me-2" />
+              Add New Lawyer
+            </CButton>
+          </CCol>
+          <CCol xs={12} md={6} className="mb-2">
+            <div className="position-relative" style={{ maxWidth: '400px', float: 'right' }}>
+              <CIcon
+                icon={cilSearch}
+                className="position-absolute"
+                style={{ top: '10px', left: '15px', zIndex: 10 }}
+              />
+              <CFormInput
+                type="text"
+                placeholder="Search by name, phone or email..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="ps-5"
+              />
+            </div>
+          </CCol>
+        </CRow>
+      </CCardBody>
+
       <CCard className="mb-4">
         <CNav variant="tabs" className="mb-4">
           {tabs.map((tab, idx) => (
@@ -236,6 +267,7 @@ const Registration = () => {
             </CNavItem>
           ))}
         </CNav>
+
         <CTable align="middle" className="mb-0 border" hover responsive>
           <CTableHead className="text-nowrap">
             <CTableRow>
@@ -250,74 +282,67 @@ const Registration = () => {
             </CTableRow>
           </CTableHead>
           <CTableBody>
-            {lawyers.map((lawyer) => (
-              <CTableRow
-                key={lawyer._id}
-                onClick={() => navigate(`/registration/view/${lawyer._id}`, { state: { lawyer } })}
-              >
-                <CTableDataCell className="text-center">
-                  {lawyer?._id?.slice(-5)?.toUpperCase()}
-                </CTableDataCell>
-                <CTableDataCell className="text-center">
-                  <div className="d-flex align-items-center justify-content-center">
-                    <CAvatar size="md" src={lawyer?.image} />
-                    <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
-                      {lawyer?.name}
+            {paginatedLawyers.length > 0 ? (
+              paginatedLawyers.map((lawyer) => (
+                <CTableRow
+                  key={lawyer._id}
+                  onClick={() =>
+                    navigate(`/registration/view/${lawyer._id}`, { state: { lawyer } })
+                  }
+                  style={{ cursor: 'pointer' }}
+                >
+                  <CTableDataCell className="text-center">
+                    {lawyer?._id?.slice(-5)?.toUpperCase()}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <div className="d-flex align-items-center justify-content-center">
+                      <CAvatar size="md" src={lawyer?.image} />
+                      <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
+                        {lawyer?.name}
+                      </div>
                     </div>
-                  </div>
-                </CTableDataCell>
-                <CTableDataCell className="text-center">{lawyer?.phone}</CTableDataCell>
-                <CTableDataCell className="text-center">{lawyer?.email}</CTableDataCell>
-                <CTableDataCell className="text-center">{`${lawyer?.age} / ${lawyer?.gender_id?.name}`}</CTableDataCell>
-                <CTableDataCell className="text-center">
-                  <CDropdown alignment="end">
-                    <CDropdownToggle color="transparent" size="sm" className="p-0 shadow-none">
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">{lawyer?.phone}</CTableDataCell>
+                  <CTableDataCell className="text-center">{lawyer?.email}</CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    {`${lawyer?.age || 'N/A'} / ${lawyer?.gender_id?.name || 'N/A'}`}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <CDropdown alignment="end">
                       <span style={{ fontSize: '24px', cursor: 'pointer' }}>⋮</span>
-                    </CDropdownToggle>
-                    <CDropdownMenu>
-                      <CDropdownItem
-                        onClick={() =>
-                          navigate(`/lawyers/view/${lawyer._id}`, { state: { lawyer } })
-                        }
-                      >
-                        View
-                      </CDropdownItem>
-                      <CDropdownItem
-                        onClick={() =>
-                          navigate(`/lawyers/edit/${lawyer._id}`, {
-                            state: { lawyer, mode: 'edit' },
-                          })
-                        }
-                      >
-                        Edit
-                      </CDropdownItem>
-                      <CDropdownItem href="/lawyers/delete">Delete</CDropdownItem>
-                    </CDropdownMenu>
-                  </CDropdown>
+                    </CDropdown>
+                  </CTableDataCell>
+                </CTableRow>
+              ))
+            ) : (
+              <CTableRow>
+                <CTableDataCell colSpan={6} className="text-center py-4">
+                  {searchTerm ? 'No matching lawyers found.' : 'No lawyers found.'}
                 </CTableDataCell>
               </CTableRow>
-            ))}
+            )}
           </CTableBody>
         </CTable>
 
-        {/* Pagination */}
-        <CPagination align="end" className="mt-3 me-3">
-          <CPaginationItem
-            aria-label="Previous"
-            disabled={currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}
-          >
-            &laquo;
-          </CPaginationItem>
-          {renderPaginationItems()}
-          <CPaginationItem
-            aria-label="Next"
-            disabled={currentPage === (data?.data?.pagination?.totalPages || 1)}
-            onClick={() => handlePageChange(currentPage + 1)}
-          >
-            &raquo;
-          </CPaginationItem>
-        </CPagination>
+        {paginatedLawyers.length > 0 && totalPages > 0 && (
+          <CPagination align="end" className="mt-3 me-3">
+            <CPaginationItem
+              aria-label="Previous"
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+            >
+              &laquo;
+            </CPaginationItem>
+            {renderPaginationItems()}
+            <CPaginationItem
+              aria-label="Next"
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+            >
+              &raquo;
+            </CPaginationItem>
+          </CPagination>
+        )}
       </CCard>
     </>
   )
