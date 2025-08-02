@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import PropTypes from 'prop-types'
 import classNames from 'classnames'
 import {
@@ -27,8 +27,9 @@ import {
   CImage,
 } from '@coreui/react'
 import { CPagination, CPaginationItem } from '@coreui/react'
+import { debounce } from 'lodash'
 import CIcon from '@coreui/icons-react'
-import { cilPlus, cilPeople, cilUserFollow } from '@coreui/icons'
+import { cilPlus, cilPeople, cilUserFollow, cilSearch } from '@coreui/icons'
 import { useNavigate } from 'react-router-dom'
 import { useGetUsersQuery } from '../../services/api'
 import { fetchSignedUrl } from '../../assets/utils/imageUtils'
@@ -79,7 +80,29 @@ const Users = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [avatarUrls, setAvatarUrls] = useState({})
   const [loadingAvatars, setLoadingAvatars] = useState(true)
-  const { data, error, isLoading } = useGetUsersQuery({ page: currentPage, limit: 10 })
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm)
+
+  const debouncedSearch = useRef(
+    debounce((term) => {
+      setDebouncedSearchTerm(term)
+    }, 500),
+  ).current
+
+  useEffect(() => {
+    debouncedSearch(searchTerm)
+  }, [searchTerm, debouncedSearch])
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value)
+    setCurrentPage(1)
+  }
+
+  const { data, error, isLoading } = useGetUsersQuery({
+    page: currentPage,
+    limit: 10,
+    search: debouncedSearchTerm, // ✅ passed to API
+  })
 
   useEffect(() => {
     const fetchAvatars = async () => {
@@ -212,13 +235,36 @@ const Users = () => {
         </CRow>
       </CCard>
 
+      {/* <CCardBody>
+        <CRow className="align-items-center mb-3">
+          <CCol xs={12} md={6}></CCol>
+        </CRow>
+      </CCardBody> */}
+
       <CCardBody>
         <CRow className="align-items-center mb-3">
-          <CCol xs={12} md={6}>
+          <CCol xs={12} md={6} className="mb-2">
             <CButton color="warning" onClick={() => navigate('/users/add')}>
               <CIcon icon={cilPlus} className="me-2" />
               Add New User
             </CButton>
+          </CCol>
+          <CCol xs={12} md={6} className="mb-2">
+            <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
+              <CIcon
+                icon={cilSearch}
+                className="position-absolute"
+                style={{ top: '17px', left: '15px', zIndex: 10 }}
+              />
+              <CFormInput
+                type="text"
+                placeholder="Search by name, phone or email..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+              />
+            </div>
           </CCol>
         </CRow>
       </CCardBody>

@@ -25,7 +25,7 @@ import { fetchSignedUrl } from '../../../assets/utils/imageUtils'
 import { DynamicModal } from '../../../components'
 import { useSelector } from 'react-redux'
 
-const LawyerView = () => {
+const ViewProfileSetup = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const [updateLawyer, { isLoading, isSuccess }] = useUpdateLawyerMutation()
@@ -80,13 +80,7 @@ const LawyerView = () => {
         setToastMessage(`Lawyer ${status} successfully`)
         setToastColor('success')
         setShowToast(true)
-        navigate('/registration', {
-          state: {
-            modified: true,
-            tab: location.state?.fromTab || (status === 'approved' ? 'approved' : 'rejected'),
-            page: location.state?.fromPage || 1,
-          },
-        })
+        navigate('/registration', { state: { modified: true } })
       } else {
         setToastMessage(result?.data?.message)
         setToastColor('danger')
@@ -274,7 +268,7 @@ const LawyerView = () => {
                 }}
                 disabled={isLoading}
               >
-                Reject
+                Pause
               </CButton>
 
               <CButton
@@ -285,7 +279,7 @@ const LawyerView = () => {
                 }}
                 disabled={isLoading}
               >
-                Approve
+                Active
               </CButton>
             </div>
           </div>
@@ -306,4 +300,4 @@ const LawyerView = () => {
   )
 }
 
-export default LawyerView
+export default ViewProfileSetup

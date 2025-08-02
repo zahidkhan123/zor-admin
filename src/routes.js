@@ -25,6 +25,12 @@ const AllLawyer = React.lazy(() => import('./views/lawyers/lawyers/AllLawyer'))
 const LawyerProfileForm = React.lazy(() => import('./views/lawyers/lawyers/EditLawyer'))
 const LawyerView = React.lazy(() => import('./views/lawyers/lawyers/ViewLawyer'))
 
+const LawyersList = React.lazy(() => import('./views/lawyers/allLawyers/AllLawyer'))
+const LawyersStatusView = React.lazy(() => import('./views/lawyers/allLawyers/ViewLawyer'))
+
+const ProfileSetup = React.lazy(() => import('./views/lawyers/ProfileSetupStatus/AllLawyer'))
+const ViewProfileSetup = React.lazy(() => import('./views/lawyers/ProfileSetupStatus/ViewLawyer'))
+
 {
   /*Verification routes */
 }
@@ -39,6 +45,12 @@ const VerificationDetail = React.lazy(
 const Profile = React.lazy(() => import('./views/lawyers/profile/Profile'))
 const ProfileDetail = React.lazy(() => import('./views/lawyers/profile/ViewProfile'))
 const ProfileEdit = React.lazy(() => import('./views/lawyers/profile/EditProfile'))
+const SetAvailability = React.lazy(() => import('./views/lawyers/profile/SetAvailability'))
+
+{
+  /*Bookings routes */
+}
+const Bookings = React.lazy(() => import('./views/bookings/bookings'))
 
 const routes = [
   { path: '/', exact: true, name: 'Home' },
@@ -56,6 +68,10 @@ const routes = [
   { path: '/lawyers/add', name: 'Add Lawyer', element: LawyerProfileForm },
   { path: '/lawyers/edit/:id', name: 'Edit Lawyer', element: LawyerProfileForm },
   { path: '/lawyers/view/:id', name: 'View Lawyer', element: LawyerView },
+  // { path: '/lawyers-list', name: 'Lawyers List', element: LawyersList },
+  // { path: '/lawyers-list/view/:id', name: 'View Lawyer', element: LawyersStatusView },
+  // { path: '/profile-setup', name: 'Profile Setup', element: ProfileSetup },
+  // { path: '/profile-setup/view/:id', name: 'View Profile Setup', element: ViewProfileSetup },
 
   { path: '/verification', name: 'Verification', element: Verification },
   { path: '/verification/detail/:id', name: 'Verification Detail', element: VerificationDetail },
@@ -64,6 +80,9 @@ const routes = [
   { path: '/profile/detail/:id', name: 'Profile Detail', element: ProfileDetail },
   { path: '/profile/edit/:id', name: 'Profile Edit', element: ProfileEdit },
   { path: '/profile/add', name: 'Profile Add', element: ProfileEdit },
+  { path: '/profile/set-availability', name: 'Set Availability', element: SetAvailability },
+
+  { path: '/bookings', name: 'Bookings', element: Bookings },
 ]
 
 export default routes

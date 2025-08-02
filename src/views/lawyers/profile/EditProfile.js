@@ -32,10 +32,10 @@ import {
 } from '../../../services/api.js'
 import { useParams } from 'react-router-dom'
 import { fetchSignedUrl, fetchMultipleSignedUrls } from '../../../assets/utils/imageUtils'
+import { useNavigate } from 'react-router-dom'
 
 const ListSection = ({ title, placeholder, items, onAdd, onRemove }) => {
   const [input, setInput] = useState('')
-
   return (
     <CCard className="mb-4 shadow-sm">
       <CCardHeader className="bg-warning text-white py-3">
@@ -113,6 +113,7 @@ const ALL_LOCATION_TYPES = [
 ]
 
 const EditProfile = () => {
+  const navigate = useNavigate()
   const { id } = useParams()
   const { data: categoriesData } = useGetCategoriesQuery()
   const { data: lawyerData } = useGetLawyerByIdQuery(id, { skip: !id })
@@ -1003,6 +1004,20 @@ const EditProfile = () => {
           <div className="text-end mt-4">
             <CButton color="warning" onClick={handleSaveLocationsAndFees}>
               Save Locations & Fees
+            </CButton>
+          </div>
+
+          {/* Footer Buttons */}
+          <div className="d-flex justify-content-end mt-2 mb-4 ml-2">
+            <CButton color="secondary" variant="outline" className="me-2">
+              Edit Profile
+            </CButton>
+            <CButton
+              color="success"
+              className="me-2"
+              onClick={() => navigate('/profile/set-availability', { state: { lawyerData } })}
+            >
+              View Availability
             </CButton>
           </div>
         </CCardBody>

@@ -52,9 +52,9 @@ export const api = createApi({
       }),
     }),
     getUsers: builder.query({
-      query: ({ page = 1, limit = 10 }) => ({
+      query: ({ page = 1, limit = 10, search = null }) => ({
         url: '/admin/users',
-        params: { page, limit },
+        params: { page, limit, ...(search && { search }) },
       }),
     }),
     getUserById: builder.query({
@@ -67,9 +67,15 @@ export const api = createApi({
       }),
     }),
     getLawyers: builder.query({
-      query: ({ page = 1, limit = 10, type = null, search = null }) => ({
+      query: ({ page = 1, limit = 10, type = null, search = null, city = null }) => ({
         url: '/admin/lawyers',
-        params: { page, limit, ...(type && { type }), ...(search && { search }) },
+        params: {
+          page,
+          limit,
+          ...(type && { type }),
+          ...(search && { search }),
+          ...(city && { city }),
+        },
       }),
     }),
     createLawyer: builder.mutation({
@@ -106,14 +112,14 @@ export const api = createApi({
       }),
     }),
     getPendingSubmissions: builder.query({
-      query: ({ page = 1, limit = 10 }) => ({
-        url: `/admin/lawyers/pending-submissions?page=${page}&limit=${limit}`,
+      query: ({ page = 1, limit = 10, search = null }) => ({
+        url: `/admin/lawyers/pending-submissions?page=${page}&limit=${limit}&search=${search}`,
         method: 'GET',
       }),
     }),
     getVerification: builder.query({
-      query: ({ page = 1, limit = 10, status = 'Pending ' }) => ({
-        url: `/admin/lawyers/verification-profiles?verification_status=${status}&page=${page}&limit=${limit}`,
+      query: ({ page = 1, limit = 10, status = 'Pending ', search = null }) => ({
+        url: `/admin/lawyers/verification-profiles?verification_status=${status}&page=${page}&limit=${limit}&search=${search}`,
         method: 'GET',
       }),
     }),
@@ -144,8 +150,8 @@ export const api = createApi({
       }),
     }),
     getFlaggedLawyers: builder.query({
-      query: ({ page = 1, limit = 10 }) => ({
-        url: `/admin/lawyers/flagged-lawyers?page=${page}&limit=${limit}`,
+      query: ({ page = 1, limit = 10, search = null }) => ({
+        url: `/admin/lawyers/flagged-lawyers?page=${page}&limit=${limit}&search=${search}`,
         method: 'GET',
       }),
     }),
@@ -168,6 +174,42 @@ export const api = createApi({
     getCities: builder.query({
       query: () => ({
         url: '/admin/dropdowns?type=City',
+        method: 'GET',
+      }),
+    }),
+    getBookings: builder.query({
+      query: ({ page = 1, limit = 10, type = null, search = null }) => ({
+        url: '/admin/bookings',
+        params: { page, limit, ...(type && { type }), ...(search && { search }) },
+      }),
+    }),
+    getLawyersStatus: builder.query({
+      query: ({ page = 1, limit = 10, status = null, search = null }) => ({
+        url: '/admin/lawyers/lawyer-status',
+        params: { page, limit, ...(status && { status }), ...(search && { search }) },
+      }),
+    }),
+    getLawyersProfileSetup: builder.query({
+      query: ({ page = 1, limit = 10, status = null, search = null }) => ({
+        url: '/admin/lawyers/profile-setup',
+        params: { page, limit, ...(status && { status }), ...(search && { search }) },
+      }),
+    }),
+    getDays: builder.query({
+      query: () => ({
+        url: '/admin/dropdowns?type=Day',
+        method: 'GET',
+      }),
+    }),
+    getLocations: builder.query({
+      query: () => ({
+        url: '/admin/locations',
+        method: 'GET',
+      }),
+    }),
+    getSlots: builder.query({
+      query: () => ({
+        url: '/admin/dropdowns?type=Slot',
         method: 'GET',
       }),
     }),
@@ -196,4 +238,10 @@ export const {
   useGetFeeandlocationQuery,
   useUpdateFeeandlocationMutation,
   useGetCitiesQuery,
+  useGetBookingsQuery,
+  useGetLawyersStatusQuery,
+  useGetLawyersProfileSetupQuery,
+  useGetDaysQuery,
+  useGetLocationsQuery,
+  useGetSlotsQuery,
 } = api

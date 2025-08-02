@@ -25,9 +25,8 @@ import {
 } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import { FaEye, FaSearch, FaPlus } from 'react-icons/fa'
-import { useGetVerificationQuery } from 'src/services/api'
+import { useGetBookingsQuery } from '../../services/api'
 import { debounce } from 'lodash'
-import { FaEllipsisV } from 'react-icons/fa'
 
 const statusTabs = {
   1: 'Pending',
@@ -42,7 +41,7 @@ const Tabs = ({ path }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const inputRef = useRef(null)
 
-  const { data, isLoading } = useGetVerificationQuery({
+  const { data, isLoading } = useGetBookingsQuery({
     ...queryParams,
     status: statusTabs[activeKey],
   })
@@ -68,12 +67,8 @@ const Tabs = ({ path }) => {
     debouncedSearch(value)
   }
 
-  const handleAddNewLawyer = (e) => {
-    // Open in new tab
-    e.preventDefault()
-    const url = `${window.location.origin}${path}/add`
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
+  // Fix: Ensure input is always visible by not conditionally rendering it and not hiding it with CSS
+  // Also, ensure CInputGroup.Text is imported and used correctly
 
   const renderNoData = () => (
     <CTableRow>
@@ -87,60 +82,28 @@ const Tabs = ({ path }) => {
     </CTableRow>
   )
 
-  // Handler for right click to open in new tab
-  const handleActionCellClick = (e, lawyerId) => {
-    // Left click: navigate as usual
-    if (e.type === 'click') {
-      navigate(`${path}/${lawyerId}`)
-    }
-  }
-
-  const handleActionCellContextMenu = (e, lawyerId) => {
-    // Right click: open in new tab
-    e.preventDefault()
-    const url = `${window.location.origin}${path}/${lawyerId}`
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
-  // Handler for Review click
-  const handleReviewClick = (lawyerId) => {
-    // Navigate to review page for the lawyer
-    navigate(`${path}/${lawyerId}/review`)
-  }
-
-  // Handler for Review right click
-  const handleReviewContextMenu = (e, lawyerId) => {
-    e.preventDefault()
-    const url = `${window.location.origin}${path}/${lawyerId}/review`
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <CNav variant="tabs">
           <CNavItem>
             <CNavLink active={activeKey === 1} onClick={() => setActiveKey(1)}>
-              New Registrations
+              Completed Bookings
             </CNavLink>
           </CNavItem>
           <CNavItem>
             <CNavLink active={activeKey === 2} onClick={() => setActiveKey(2)}>
-              Registered
+              Cancelled Bookings
             </CNavLink>
           </CNavItem>
           <CNavItem>
             <CNavLink active={activeKey === 3} onClick={() => setActiveKey(3)}>
-              Declined
+              Upcoming Bookings
             </CNavLink>
           </CNavItem>
         </CNav>
 
-        {/* Add new Lawyer button */}
-        <CButton color="primary" onClick={handleAddNewLawyer} className="ms-2">
-          <FaPlus className="me-2" />
-          Add New Lawyer
-        </CButton>
+        {/* Add new Lawyer button and search input side by side */}
       </div>
 
       <CTabContent>
@@ -164,14 +127,15 @@ const Tabs = ({ path }) => {
                     <CTableRow>
                       <CTableHeaderCell className="text-center">ID</CTableHeaderCell>
                       <CTableHeaderCell className="text-center">Lawyer</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Phone</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Email</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Gender/Age</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Status</CTableHeaderCell>
+                      <CTableHeaderCell className="text-center">User</CTableHeaderCell>
+                      <CTableHeaderCell className="text-center">Booking Schedule</CTableHeaderCell>
+                      <CTableHeaderCell className="text-center">Booking Location</CTableHeaderCell>
+                      <CTableHeaderCell className="text-center">Payment Status</CTableHeaderCell>
+                      <CTableHeaderCell className="text-center">Price</CTableHeaderCell>
                       <CTableHeaderCell className="text-center">Action</CTableHeaderCell>
                     </CTableRow>
                   </CTableHead>
-                  <CTableBody>
+                  {/* <CTableBody>
                     {tableData.length > 0
                       ? tableData.map((item, index) => (
                           <CTableRow key={index}>
@@ -182,11 +146,9 @@ const Tabs = ({ path }) => {
                                 <div className="ms-2 text-start">{item.name || item.full_name}</div>
                               </div>
                             </CTableDataCell>
-                            <CTableDataCell className="text-center">{item.phone}</CTableDataCell>
-                            <CTableDataCell className="text-center">{item.email}</CTableDataCell>
-                            <CTableDataCell className="text-center">
-                              {item?.gender} / {item.age}
-                            </CTableDataCell>
+                            <CTableDataCell className="text-center">{item.user_name}</CTableDataCell>
+                            <CTableDataCell className="text-center">{item.booking_schedule}</CTableDataCell>
+                            <CTableDataCell className="text-center">{item.booking_type}</CTableDataCell>
                             <CTableDataCell className="text-center">
                               <CBadge
                                 color={
@@ -202,22 +164,16 @@ const Tabs = ({ path }) => {
                             </CTableDataCell>
                             <CTableDataCell className="text-center">
                               <div
-                                onClick={() =>
-                                  window.open(
-                                    `${window.location.origin}${path}/${item.lawyer_id}`,
-                                    '_blank',
-                                    'noopener,noreferrer',
-                                  )
-                                }
+                                onClick={() => navigate(`${path}/${item.lawyer_id}`)}
                                 style={{ cursor: 'pointer' }}
                               >
-                                <FaEllipsisV />
+                                <FaEye className="me-2" />
                               </div>
                             </CTableDataCell>
                           </CTableRow>
                         ))
                       : renderNoData()}
-                  </CTableBody>
+                    </CTableBody> */}
                 </CTable>
 
                 {tableData.length > 0 && (

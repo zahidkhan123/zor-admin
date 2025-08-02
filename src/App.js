@@ -41,13 +41,22 @@ const VerificationDetail = React.lazy(
 const Profile = React.lazy(() => import('./views/lawyers/profile/Profile'))
 const ProfileDetail = React.lazy(() => import('./views/lawyers/profile/ViewProfile'))
 const ProfileEdit = React.lazy(() => import('./views/lawyers/profile/EditProfile'))
-
+const SetAvailability = React.lazy(() => import('./views/lawyers/profile/SetAvailability'))
 {
   /*Lawyer routes */
 }
 const AllLawyer = React.lazy(() => import('./views/lawyers/lawyers/AllLawyer'))
 const LawyerProfileForm = React.lazy(() => import('./views/lawyers/lawyers/EditLawyer'))
 const LawyerView = React.lazy(() => import('./views/lawyers/lawyers/ViewLawyer'))
+const LawyersList = React.lazy(() => import('./views/lawyers/allLawyers/AllLawyer'))
+const LawyersView = React.lazy(() => import('./views/lawyers/allLawyers/ViewLawyer'))
+const ProfileSetup = React.lazy(() => import('./views/lawyers/ProfileSetupStatus/AllLawyer'))
+const ViewProfileSetup = React.lazy(() => import('./views/lawyers/ProfileSetupStatus/ViewLawyer'))
+
+{
+  /*Bookings routes */
+}
+const Bookings = React.lazy(() => import('./views/bookings/bookings'))
 
 // Components
 const ProtectedRoute = React.lazy(() => import('./components/ProtectedRoute'))
@@ -110,11 +119,19 @@ const App = () => {
             <Route path="profile/detail/:id" element={<ProfileDetail />} />
             <Route path="profile/edit/:id" element={<ProfileEdit />} />
             <Route path="profile/add" element={<ProfileEdit />} />
+            <Route path="profile/set-availability" element={<SetAvailability />} />
             {/* Lawyer routes */}
             <Route path="lawyers" element={<AllLawyer />} />
             <Route path="lawyers/add" element={<LawyerProfileForm />} />
             <Route path="lawyers/edit/:id" element={<LawyerProfileForm />} />
             <Route path="lawyers/view/:id" element={<LawyerView />} />
+            <Route path="lawyers-list" element={<LawyersList />} />
+            <Route path="lawyers-list/view/:id" element={<LawyersView />} />
+
+            <Route path="profile-setup" element={<ProfileSetup />} />
+            <Route path="profile-setup/view/:id" element={<ViewProfileSetup />} />
+            {/* Bookings routes */}
+            <Route path="bookings" element={<Bookings />} />
           </Route>
 
           {/* Catch-all */}

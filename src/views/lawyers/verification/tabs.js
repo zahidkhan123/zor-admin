@@ -18,21 +18,43 @@ import {
   CPaginationItem,
   CBadge,
   CSpinner,
+  CFormInput,
+  CButton,
 } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { FaEye } from 'react-icons/fa'
+import { cilSearch } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
 import {
   useGetPendingSubmissionsQuery,
   useGetVerificationQuery,
   useGetFlaggedLawyersQuery,
-} from 'src/services/api'
+} from '../../../services/api'
 
 const Tabs = ({ path }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const [activeKey, setActiveKey] = useState(1)
-  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10 })
+  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10, search: '' })
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value)
+  }
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setQueryParams((prev) => ({
+        ...prev,
+        search: searchTerm.trim(),
+        page: 1,
+      }))
+    }, 400)
+    return () => clearTimeout(handler)
+  }, [searchTerm])
 
   const {
     data: pendingData,
@@ -75,7 +97,7 @@ const Tabs = ({ path }) => {
     { ...queryParams, status: 'Re-Submitted', refreshTrigger },
     { skip: activeKey !== 5 },
   )
-  console.log(pendingData?.data?.totalPages)
+
   const {
     data: spamVerification,
     isLoading: loadingSpamVerification,
@@ -273,18 +295,142 @@ const Tabs = ({ path }) => {
 
   return (
     <>
-      <CNav variant="tabs" className="mb-4">
-        {['New Verifications', 'Pending', 'Rejected', 'Verified', 'Old Verifications', 'Spam'].map(
-          (label, idx) => (
+      {/* Tabs and Search Row */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3 mt-3">
+        <CNav variant="tabs" className="flex-wrap">
+          {[
+            'New Verifications',
+            'Pending',
+            'Rejected',
+            'Verified',
+            'Old Verifications',
+            'Spam',
+          ].map((label, idx) => (
             <CNavItem key={idx}>
-              <CNavLink active={activeKey === idx + 1} onClick={() => setActiveKey(idx + 1)}>
+              <CNavLink
+                active={activeKey === idx + 1}
+                onClick={() => setActiveKey(idx + 1)}
+                style={{ cursor: 'pointer', fontSize: '1rem', padding: '0.6rem 1rem' }}
+              >
                 {label}
               </CNavLink>
             </CNavItem>
-          ),
-        )}
-      </CNav>
+          ))}
+        </CNav>
 
+        <div
+          className="position-relative"
+          style={{
+            width: '100%',
+            maxWidth: '350px',
+            marginLeft: 'auto',
+          }}
+        >
+          <CIcon
+            icon={cilSearch}
+            className="position-absolute"
+            style={{ top: '14px', left: '15px', zIndex: 10 }}
+          />
+          <CFormInput
+            type="text"
+            placeholder="Search by name, phone or email..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="ps-5"
+            style={{
+              fontSize: '1rem',
+              height: '44px',
+              borderRadius: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* <CTabContent>
+        <CTabPane visible={true}>
+          <CCard className="mb-4">
+            <CTable align="middle" className="mb-0 border" hover responsive>
+              <CTableHead className="text-nowrap">
+                <CTableRow>
+                  <CTableHeaderCell className="text-center">ID</CTableHeaderCell>
+                  <CTableHeaderCell className="text-center">Lawyer</CTableHeaderCell>
+                  <CTableHeaderCell className="text-center">Phone</CTableHeaderCell>
+                  <CTableHeaderCell className="text-center">Email</CTableHeaderCell>
+                  <CTableHeaderCell className="text-center">Gender/Age</CTableHeaderCell>
+                  <CTableHeaderCell className="text-center">Status</CTableHeaderCell>
+                  <CTableHeaderCell className="text-center">Action</CTableHeaderCell>
+                </CTableRow>
+              </CTableHead>
+              <CTableBody>
+                {tableData.length > 0
+                  ? tableData.map((item, index) => (
+                      <CTableRow key={index}>
+                        <CTableDataCell className="text-center">{index + 1}</CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <div className="d-flex align-items-center justify-content-center">
+                            <CAvatar size="md" src={item.image || ''} />
+                            <div className="ms-2 text-start">{item.name || item.full_name}</div>
+                          </div>
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">{item.phone}</CTableDataCell>
+                        <CTableDataCell className="text-center">{item.email}</CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          {item?.gender} / {item.age}
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <CBadge
+                            color={
+                              item.verification_status === 'Verified'
+                                ? 'success'
+                                : item.verification_status === 'Pending'
+                                  ? 'warning'
+                                  : item.verification_status === 'Rejected'
+                                    ? 'danger'
+                                    : item.status === 'rejected'
+                                      ? 'danger'
+                                      : 'secondary'
+                            }
+                          >
+                            {item.verification_status ||
+                              (item.status === 'rejected' ? 'Flagged' : 'Not Started')}
+                          </CBadge>
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <div onClick={() => navigate(`${path}/${item.lawyer_id}`)}>
+                            <FaEye className="me-2" />
+                          </div>
+                        </CTableDataCell>
+                      </CTableRow>
+                    ))
+                  : renderNoData()}
+              </CTableBody>
+            </CTable>
+
+            {tableData.length > 0 && (
+              <CPagination align="end" className="mt-3 me-3">
+                <CPaginationItem
+                  aria-label="Previous"
+                  disabled={queryParams.page === 1}
+                  onClick={() => setQueryParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+                >
+                  <span aria-hidden="true">&laquo;</span>
+                </CPaginationItem>
+
+                {renderPaginationItems()}
+
+                <CPaginationItem
+                  aria-label="Next"
+                  disabled={queryParams.page === getTotalPages()}
+                  onClick={() => setQueryParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+                >
+                  <span aria-hidden="true">&raquo;</span>
+                </CPaginationItem>
+              </CPagination>
+            )}
+          </CCard>
+        </CTabPane>
+      </CTabContent> */}
       <CTabContent>
         <CTabPane visible={true}>
           <CCard className="mb-4">

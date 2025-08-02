@@ -371,14 +371,14 @@ const ProfileDetail = () => {
           </CCardBody>
         </CCard>
         {/* Footer Buttons */}
-        <div className="d-flex justify-content-end mt-2 mb-4 ml-2">
+        {/* <div className="d-flex justify-content-end mt-2 mb-4 ml-2">
           <CButton color="secondary" variant="outline" className="me-2">
             Cancel
           </CButton>
           <CButton color="success" className="me-2" onClick={handleSave}>
             Save
           </CButton>
-        </div>
+        </div> */}
       </CCard>
     </CContainer>
   )

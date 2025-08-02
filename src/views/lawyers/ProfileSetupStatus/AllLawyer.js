@@ -25,39 +25,31 @@ import {
   CNavLink,
   CWidgetStatsC,
   CFormInput,
-  CFormSelect,
 } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilPeople, cilUserFollow, cilPlus, cilSearch } from '@coreui/icons'
-import { useGetLawyersQuery } from '../../../services/api'
+import { useGetLawyersProfileSetupQuery } from '../../../services/api'
 import { FaCheckCircle } from 'react-icons/fa'
 
 const tabs = [
-  { key: 'pending', label: 'New Registrations' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'rejected', label: 'Rejected' },
+  { key: 'new', label: 'New' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'completed', label: 'Completed' },
 ]
-
-const cities = ['Lahore', 'Karachi', 'Islamabad', 'Gujranwala', 'Sialkot', 'Rawalpindi']
 
 const PAGE_SIZE = 10 // Changed to match backend default
 
-const Registration = () => {
+const ProfileSetup = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { modified } = location.state || {}
-  const [activeTab, setActiveTab] = useState('pending')
+  const [activeTab, setActiveTab] = useState('new')
   const [currentPage, setCurrentPage] = useState(1)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
-  const [selectedCity, setSelectedCity] = useState('')
-
-  const handleCityChange = (e) => {
-    setSelectedCity(e.target.value)
-  }
 
   // Debounce search term to avoid too many API calls
   useEffect(() => {
@@ -70,31 +62,28 @@ const Registration = () => {
     }
   }, [searchTerm])
 
-  const { data, error, isLoading, refetch } = useGetLawyersQuery({
+  const { data, error, isLoading, refetch } = useGetLawyersProfileSetupQuery({
     page: currentPage,
     limit: PAGE_SIZE,
-    type: activeTab,
+    status: activeTab,
     search: debouncedSearchTerm,
-    city: selectedCity || undefined,
   })
 
   const paginatedLawyers = data?.data?.lawyers || []
-  const totalPages = data?.data?.pagination?.totalPages || 1
+  // Fix: Make sure totalPages is at least 1 if there are lawyers, otherwise 0
+  const totalPages =
+    data?.data?.pagination?.totalPages !== undefined
+      ? data.data.pagination.totalPages
+      : paginatedLawyers.length > 0
+        ? 1
+        : 0
 
   useEffect(() => {
-    debugger
     if (location?.state?.tab) {
-      debugger
       setActiveTab(location.state.tab)
-    }
-    if (location?.state?.page) {
-      debugger
-      setCurrentPage(location.state.page)
-    }
-    if (location?.state?.tab || location?.state?.page) {
       window.history.replaceState({}, document.title)
     }
-  }, [location?.state])
+  }, [location?.state?.tab])
 
   useEffect(() => {
     if (location?.state?.lawyerAdded) {
@@ -113,30 +102,34 @@ const Registration = () => {
     }
   }, [modified, location?.state?.tab, refetch])
 
-  // useEffect(() => {
-  //   setCurrentPage(1)
-  // }, [activeTab, debouncedSearchTerm, selectedCity])
+  // Reset to page 1 when tab or search term changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, debouncedSearchTerm])
 
   const handleSearchChange = (e) => {
-    console.log(e.target.value)
     setSearchTerm(e.target.value)
   }
 
   const handlePageChange = (page) => {
-    setCurrentPage(page)
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page)
+    }
   }
 
+  // Improved pagination rendering for all edge cases
   const renderPaginationItems = () => {
     const items = []
+    if (totalPages <= 1) return items
 
-    if (totalPages === 0) return items
-
+    // Always show first page
     items.push(
       <CPaginationItem key={1} active={currentPage === 1} onClick={() => handlePageChange(1)}>
         1
       </CPaginationItem>,
     )
 
+    // Show ellipsis if needed
     if (currentPage > 3) {
       items.push(
         <CPaginationItem key="ellipsis1" disabled>
@@ -145,6 +138,7 @@ const Registration = () => {
       )
     }
 
+    // Show pages around current page
     for (
       let i = Math.max(2, currentPage - 1);
       i <= Math.min(totalPages - 1, currentPage + 1);
@@ -157,6 +151,7 @@ const Registration = () => {
       )
     }
 
+    // Show ellipsis if needed
     if (currentPage < totalPages - 2) {
       items.push(
         <CPaginationItem key="ellipsis2" disabled>
@@ -165,6 +160,7 @@ const Registration = () => {
       )
     }
 
+    // Always show last page if more than 1
     if (totalPages > 1) {
       items.push(
         <CPaginationItem
@@ -249,7 +245,7 @@ const Registration = () => {
 
       <CCardBody>
         <CRow className="align-items-center mb-3">
-          <CCol xs={12} md={4} className="mb-2">
+          <CCol xs={12} md={6} className="mb-2">
             <CButton
               color="warning"
               onClick={() => navigate('/lawyers/add', { state: { mode: 'add' } })}
@@ -258,30 +254,7 @@ const Registration = () => {
               Add New Lawyer
             </CButton>
           </CCol>
-          <CCol xs={12} md={4} className="mb-2">
-            <CFormSelect
-              aria-label="Select City"
-              value={selectedCity}
-              onChange={handleCityChange}
-              className="w-100"
-              style={{
-                fontSize: '1.1rem',
-                height: '48px',
-                borderRadius: '8px',
-                backgroundColor: '#fff',
-                padding: '0.5rem 1rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              }}
-            >
-              <option value="">All Cities</option>
-              {cities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </CFormSelect>
-          </CCol>
-          <CCol xs={12} md={4} className="mb-2">
+          <CCol xs={12} md={6} className="mb-2">
             <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
               <CIcon
                 icon={cilSearch}
@@ -319,9 +292,7 @@ const Registration = () => {
               <CTableHeaderCell className="bg-body-tertiary text-center">Lawyer</CTableHeaderCell>
               <CTableHeaderCell className="bg-body-tertiary text-center">Phone</CTableHeaderCell>
               <CTableHeaderCell className="bg-body-tertiary text-center">Email</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">
-                Age & Gender
-              </CTableHeaderCell>
+              <CTableHeaderCell className="bg-body-tertiary text-center">Status</CTableHeaderCell>
               <CTableHeaderCell className="bg-body-tertiary text-center">Action</CTableHeaderCell>
             </CTableRow>
           </CTableHead>
@@ -331,13 +302,7 @@ const Registration = () => {
                 <CTableRow
                   key={lawyer._id}
                   onClick={() =>
-                    navigate(`/registration/view/${lawyer._id}`, {
-                      state: {
-                        lawyer,
-                        fromTab: activeTab, // Add current tab
-                        fromPage: currentPage, // Add current page
-                      },
-                    })
+                    navigate(`/profile-setup/view/${lawyer._id}`, { state: { lawyer } })
                   }
                   style={{ cursor: 'pointer' }}
                 >
@@ -355,7 +320,24 @@ const Registration = () => {
                   <CTableDataCell className="text-center">{lawyer?.phone}</CTableDataCell>
                   <CTableDataCell className="text-center">{lawyer?.email}</CTableDataCell>
                   <CTableDataCell className="text-center">
-                    {`${lawyer?.age || 'N/A'} / ${lawyer?.gender_id?.name || 'N/A'}`}
+                    <span
+                      className={`badge rounded-pill px-3 py-2 ${
+                        lawyer?.is_live === 'active'
+                          ? 'bg-success'
+                          : lawyer?.is_live === 'paused'
+                            ? 'bg-warning text-dark'
+                            : 'bg-secondary'
+                      }`}
+                      style={{ fontSize: '0.95rem' }}
+                    >
+                      {lawyer?.is_live === 'active'
+                        ? 'Active'
+                        : lawyer?.is_live === 'paused'
+                          ? 'Paused'
+                          : lawyer?.is_live === 'pending'
+                            ? 'Pending'
+                            : lawyer?.is_live || 'Unknown'}
+                    </span>
                   </CTableDataCell>
                   <CTableDataCell className="text-center">
                     <CDropdown alignment="end">
@@ -374,28 +356,31 @@ const Registration = () => {
           </CTableBody>
         </CTable>
 
+        {/* Pagination: Only show if there are lawyers and more than 1 page */}
         {paginatedLawyers.length > 0 && totalPages > 1 && (
-          <CPagination align="end" className="mt-3 me-3">
-            <CPaginationItem
-              aria-label="Previous"
-              disabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
-            >
-              &laquo;
-            </CPaginationItem>
-            {renderPaginationItems()}
-            <CPaginationItem
-              aria-label="Next"
-              disabled={currentPage === totalPages}
-              onClick={() => handlePageChange(currentPage + 1)}
-            >
-              &raquo;
-            </CPaginationItem>
-          </CPagination>
+          <div className="d-flex justify-content-end mt-3 me-3">
+            <CPagination>
+              <CPaginationItem
+                aria-label="Previous"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
+                &laquo;
+              </CPaginationItem>
+              {renderPaginationItems()}
+              <CPaginationItem
+                aria-label="Next"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
+                &raquo;
+              </CPaginationItem>
+            </CPagination>
+          </div>
         )}
       </CCard>
     </>
   )
 }
 
-export default Registration
+export default ProfileSetup
