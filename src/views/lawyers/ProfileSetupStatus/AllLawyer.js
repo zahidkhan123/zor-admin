@@ -392,7 +392,9 @@ const ProfileSetup = () => {
                   paginatedLawyers.map((lawyer) => (
                     <CTableRow
                       key={lawyer._id}
-                      onClick={() => navigate(`/profile/edit/${lawyer._id}`, { state: { lawyer } })}
+                      onClick={() =>
+                        navigate(`/profile/edit/${lawyer.user_id}`, { state: { lawyer } })
+                      }
                       style={{ cursor: 'pointer' }}
                     >
                       <CTableDataCell className="text-center">
