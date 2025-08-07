@@ -31,6 +31,7 @@ const LawyerProfileForm = () => {
   const { lawyer, mode } = location.state || { mode: 'add' }
   const [submitError, setSubmitError] = useState(null)
   const [showToast, setShowToast] = useState(false)
+  const [errors, setErrors] = useState({})
 
   const [formData, setFormData] = useState({
     name: '',
@@ -104,25 +105,38 @@ const LawyerProfileForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const newErrors = {}
+
+    if (formData.name.length < 3) {
+      newErrors.name = 'Name must be at least 3 characters long.'
+    }
+    if (formData.name.length > 25) {
+      newErrors.name = 'Name must be less than 25 characters long.'
+    }
+
     if (formData.password && formData.password.length < 4) {
-      setSubmitError({ data: { message: 'Password must be at least 4 characters long.' } })
-      setShowToast(true)
-      return
+      newErrors.password = 'Password must be at least 4 characters long.'
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setSubmitError({ data: { message: 'Passwords do not match.' } })
-      setShowToast(true)
+      newErrors.confirmPassword = 'Passwords do not match.'
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
       return
     }
-    debugger
+
+    setErrors({}) // Clear previous errors
+
     const submitData = {
       ...formData,
       user_type: 'lawyer',
     }
-    debugger
+
     delete submitData.confirmPassword
-    debugger
+
     try {
       const response = await createLawyer(submitData).unwrap()
       if (response.success) {
@@ -209,7 +223,11 @@ const LawyerProfileForm = () => {
                       value={formData.name}
                       onChange={handleInputChange}
                       placeholder="Name"
+                      minLength={3}
+                      maxLength={25}
+                      required
                     />
+                    {errors.name && <small className="text-danger">{errors.name}</small>}
                   </CCol>
                   <CCol md={6}>
                     <CFormLabel>Gender</CFormLabel>
@@ -339,6 +357,7 @@ const LawyerProfileForm = () => {
                   onChange={handleInputChange}
                   type="password"
                 />
+                {errors.password && <small className="text-danger">{errors.password}</small>}
               </CCol>
               <CCol md={4}>
                 <CFormLabel>Confirm Password</CFormLabel>
@@ -349,6 +368,9 @@ const LawyerProfileForm = () => {
                   onChange={handleInputChange}
                   type="password"
                 />
+                {errors.confirmPassword && (
+                  <small className="text-danger">{errors.confirmPassword}</small>
+                )}
               </CCol>
             </CRow>
 

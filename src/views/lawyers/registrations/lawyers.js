@@ -53,10 +53,11 @@ const Registration = () => {
   const [toastMessage, setToastMessage] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
-  const [selectedCity, setSelectedCity] = useState('')
+  const [citySearchTerm, setCitySearchTerm] = useState('')
+  const [debouncedCitySearchTerm, setDebouncedCitySearchTerm] = useState('')
 
-  const handleCityChange = (e) => {
-    setSelectedCity(e.target.value)
+  const handleCitySearchChange = (e) => {
+    setCitySearchTerm(e.target.value)
   }
 
   // Debounce search term to avoid too many API calls
@@ -70,25 +71,33 @@ const Registration = () => {
     }
   }, [searchTerm])
 
+  // Debounce city search term to avoid too many API calls
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedCitySearchTerm(citySearchTerm)
+    }, 500)
+
+    return () => {
+      clearTimeout(timerId)
+    }
+  }, [citySearchTerm])
+
   const { data, error, isLoading, refetch } = useGetLawyersQuery({
     page: currentPage,
     limit: PAGE_SIZE,
     type: activeTab,
     search: debouncedSearchTerm,
-    city: selectedCity || undefined,
+    city: debouncedCitySearchTerm || undefined,
   })
 
   const paginatedLawyers = data?.data?.lawyers || []
   const totalPages = data?.data?.pagination?.totalPages || 1
 
   useEffect(() => {
-    debugger
     if (location?.state?.tab) {
-      debugger
       setActiveTab(location.state.tab)
     }
     if (location?.state?.page) {
-      debugger
       setCurrentPage(location.state.page)
     }
     if (location?.state?.tab || location?.state?.page) {
@@ -105,17 +114,13 @@ const Registration = () => {
   }, [location])
 
   useEffect(() => {
-    if (modified || location?.state?.tab) {
+    if (modified) {
       refetch()
       setToastMessage('Lawyer updated successfully!')
       setToastVisible(true)
       window.history.replaceState({}, document.title)
     }
-  }, [modified, location?.state?.tab, refetch])
-
-  // useEffect(() => {
-  //   setCurrentPage(1)
-  // }, [activeTab, debouncedSearchTerm, selectedCity])
+  }, [modified, activeTab])
 
   const handleSearchChange = (e) => {
     console.log(e.target.value)
@@ -259,27 +264,21 @@ const Registration = () => {
             </CButton>
           </CCol>
           <CCol xs={12} md={4} className="mb-2">
-            <CFormSelect
-              aria-label="Select City"
-              value={selectedCity}
-              onChange={handleCityChange}
-              className="w-100"
-              style={{
-                fontSize: '1.1rem',
-                height: '48px',
-                borderRadius: '8px',
-                backgroundColor: '#fff',
-                padding: '0.5rem 1rem',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              }}
-            >
-              <option value="">All Cities</option>
-              {cities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </CFormSelect>
+            <div className="position-relative" style={{ maxWidth: '600px' }}>
+              <CIcon
+                icon={cilSearch}
+                className="position-absolute"
+                style={{ top: '17px', left: '15px', zIndex: 10 }}
+              />
+              <CFormInput
+                type="text"
+                placeholder="Search by city..."
+                value={citySearchTerm}
+                onChange={handleCitySearchChange}
+                className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+              />
+            </div>
           </CCol>
           <CCol xs={12} md={4} className="mb-2">
             <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
@@ -305,7 +304,13 @@ const Registration = () => {
         <CNav variant="tabs" className="mb-4">
           {tabs.map((tab, idx) => (
             <CNavItem key={idx}>
-              <CNavLink active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
+              <CNavLink
+                active={activeTab === tab.key}
+                onClick={() => {
+                  setActiveTab(tab.key)
+                  setCurrentPage(1)
+                }}
+              >
                 {tab.label}
               </CNavLink>
             </CNavItem>
@@ -334,8 +339,9 @@ const Registration = () => {
                     navigate(`/registration/view/${lawyer._id}`, {
                       state: {
                         lawyer,
-                        fromTab: activeTab, // Add current tab
-                        fromPage: currentPage, // Add current page
+                        fromTab: activeTab,
+                        fromPage: currentPage,
+                        from: 'registrations',
                       },
                     })
                   }
@@ -355,7 +361,7 @@ const Registration = () => {
                   <CTableDataCell className="text-center">{lawyer?.phone}</CTableDataCell>
                   <CTableDataCell className="text-center">{lawyer?.email}</CTableDataCell>
                   <CTableDataCell className="text-center">
-                    {`${lawyer?.age || 'N/A'} / ${lawyer?.gender_id?.name || 'N/A'}`}
+                    {`${lawyer?.age || 'N/A'} / ${lawyer?.gender || 'N/A'}`}
                   </CTableDataCell>
                   <CTableDataCell className="text-center">
                     <CDropdown alignment="end">

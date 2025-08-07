@@ -53,8 +53,8 @@ const SetAvailability = React.lazy(() => import('./views/lawyers/profile/SetAvai
 const Bookings = React.lazy(() => import('./views/bookings/bookings'))
 
 const routes = [
-  { path: '/', exact: true, name: 'Home' },
-  { path: '/dashboard', name: 'Dashboard', element: Dashboard },
+  // { path: '/', exact: true, name: 'Home' },
+  { path: '/', exact: true, name: 'Home', element: Dashboard },
 
   { path: '/users', name: 'Users', element: Users },
   { path: '/users/add', name: 'Add User', element: UserEdit },
@@ -68,10 +68,10 @@ const routes = [
   { path: '/lawyers/add', name: 'Add Lawyer', element: LawyerProfileForm },
   { path: '/lawyers/edit/:id', name: 'Edit Lawyer', element: LawyerProfileForm },
   { path: '/lawyers/view/:id', name: 'View Lawyer', element: LawyerView },
-  // { path: '/lawyers-list', name: 'Lawyers List', element: LawyersList },
-  // { path: '/lawyers-list/view/:id', name: 'View Lawyer', element: LawyersStatusView },
-  // { path: '/profile-setup', name: 'Profile Setup', element: ProfileSetup },
-  // { path: '/profile-setup/view/:id', name: 'View Profile Setup', element: ViewProfileSetup },
+  { path: '/lawyers-list', name: 'Lawyers List', element: LawyersList },
+  { path: '/lawyers-list/view/:id', name: 'View Lawyer', element: LawyersStatusView },
+  { path: '/profile-setup', name: 'Profile Setup', element: ProfileSetup },
+  { path: '/profile-setup/view/:id', name: 'View Profile Setup', element: ViewProfileSetup },
 
   { path: '/verification', name: 'Verification', element: Verification },
   { path: '/verification/detail/:id', name: 'Verification Detail', element: VerificationDetail },

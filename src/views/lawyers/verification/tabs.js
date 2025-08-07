@@ -34,17 +34,26 @@ import {
 const Tabs = ({ path }) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [activeKey, setActiveKey] = useState(1)
-  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10, search: '' })
+  const { fromTab, fromPage } = location.state || {}
+
+  const [activeKey, setActiveKey] = useState(fromTab || 1)
+  const [queryParams, setQueryParams] = useState({
+    page: fromPage || 1,
+    limit: 10,
+    search: '',
+  })
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Handle search input change
+  useEffect(() => {
+    if (fromTab) setActiveKey(fromTab)
+    if (fromPage) setQueryParams((prev) => ({ ...prev, page: fromPage }))
+  }, [navigate, fromTab, fromPage])
+
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value)
   }
 
-  // Debounce search
   useEffect(() => {
     const handler = setTimeout(() => {
       setQueryParams((prev) => ({
@@ -103,9 +112,9 @@ const Tabs = ({ path }) => {
     isLoading: loadingSpamVerification,
     refetch: refetchSpamVerification,
   } = useGetFlaggedLawyersQuery({ ...queryParams, refreshTrigger }, { skip: activeKey !== 6 })
-
   useEffect(() => {
-    if (location.state?.refresh) {
+    const { refresh, fromTab } = location.state || {}
+    if (refresh) {
       setRefreshTrigger((prev) => prev + 1)
       navigate(location.pathname, { replace: true, state: {} })
 
@@ -117,9 +126,9 @@ const Tabs = ({ path }) => {
         5: refetchOldVerification,
         6: refetchSpamVerification,
       }
-      refetchFunctions[activeKey]?.()
+      refetchFunctions[fromTab || activeKey]?.()
     }
-  }, [location.state, activeKey, navigate, location.pathname])
+  }, [location.state, navigate, location.pathname])
 
   const isLoading =
     (activeKey === 1 && loadingPending) ||
@@ -347,90 +356,6 @@ const Tabs = ({ path }) => {
         </div>
       </div>
 
-      {/* <CTabContent>
-        <CTabPane visible={true}>
-          <CCard className="mb-4">
-            <CTable align="middle" className="mb-0 border" hover responsive>
-              <CTableHead className="text-nowrap">
-                <CTableRow>
-                  <CTableHeaderCell className="text-center">ID</CTableHeaderCell>
-                  <CTableHeaderCell className="text-center">Lawyer</CTableHeaderCell>
-                  <CTableHeaderCell className="text-center">Phone</CTableHeaderCell>
-                  <CTableHeaderCell className="text-center">Email</CTableHeaderCell>
-                  <CTableHeaderCell className="text-center">Gender/Age</CTableHeaderCell>
-                  <CTableHeaderCell className="text-center">Status</CTableHeaderCell>
-                  <CTableHeaderCell className="text-center">Action</CTableHeaderCell>
-                </CTableRow>
-              </CTableHead>
-              <CTableBody>
-                {tableData.length > 0
-                  ? tableData.map((item, index) => (
-                      <CTableRow key={index}>
-                        <CTableDataCell className="text-center">{index + 1}</CTableDataCell>
-                        <CTableDataCell className="text-center">
-                          <div className="d-flex align-items-center justify-content-center">
-                            <CAvatar size="md" src={item.image || ''} />
-                            <div className="ms-2 text-start">{item.name || item.full_name}</div>
-                          </div>
-                        </CTableDataCell>
-                        <CTableDataCell className="text-center">{item.phone}</CTableDataCell>
-                        <CTableDataCell className="text-center">{item.email}</CTableDataCell>
-                        <CTableDataCell className="text-center">
-                          {item?.gender} / {item.age}
-                        </CTableDataCell>
-                        <CTableDataCell className="text-center">
-                          <CBadge
-                            color={
-                              item.verification_status === 'Verified'
-                                ? 'success'
-                                : item.verification_status === 'Pending'
-                                  ? 'warning'
-                                  : item.verification_status === 'Rejected'
-                                    ? 'danger'
-                                    : item.status === 'rejected'
-                                      ? 'danger'
-                                      : 'secondary'
-                            }
-                          >
-                            {item.verification_status ||
-                              (item.status === 'rejected' ? 'Flagged' : 'Not Started')}
-                          </CBadge>
-                        </CTableDataCell>
-                        <CTableDataCell className="text-center">
-                          <div onClick={() => navigate(`${path}/${item.lawyer_id}`)}>
-                            <FaEye className="me-2" />
-                          </div>
-                        </CTableDataCell>
-                      </CTableRow>
-                    ))
-                  : renderNoData()}
-              </CTableBody>
-            </CTable>
-
-            {tableData.length > 0 && (
-              <CPagination align="end" className="mt-3 me-3">
-                <CPaginationItem
-                  aria-label="Previous"
-                  disabled={queryParams.page === 1}
-                  onClick={() => setQueryParams((prev) => ({ ...prev, page: prev.page - 1 }))}
-                >
-                  <span aria-hidden="true">&laquo;</span>
-                </CPaginationItem>
-
-                {renderPaginationItems()}
-
-                <CPaginationItem
-                  aria-label="Next"
-                  disabled={queryParams.page === getTotalPages()}
-                  onClick={() => setQueryParams((prev) => ({ ...prev, page: prev.page + 1 }))}
-                >
-                  <span aria-hidden="true">&raquo;</span>
-                </CPaginationItem>
-              </CPagination>
-            )}
-          </CCard>
-        </CTabPane>
-      </CTabContent> */}
       <CTabContent>
         <CTabPane visible={true}>
           <CCard className="mb-4">
@@ -481,7 +406,27 @@ const Tabs = ({ path }) => {
                           </CBadge>
                         </CTableDataCell>
                         <CTableDataCell className="text-center">
-                          <div onClick={() => navigate(`${path}/${item.lawyer_id}`)}>
+                          <div
+                            onClick={() =>
+                              activeKey === 1
+                                ? navigate(`/registration/view/${item._id}`, {
+                                    state: {
+                                      lawyer: item,
+                                      fromTab: activeKey,
+                                      fromPage: queryParams.page,
+                                      searchTerm: searchTerm,
+                                      from: 'verification',
+                                    },
+                                  })
+                                : navigate(`${path}/${item.lawyer_id}`, {
+                                    state: {
+                                      fromTab: activeKey,
+                                      fromPage: queryParams.page,
+                                      searchTerm: searchTerm,
+                                    },
+                                  })
+                            }
+                          >
                             <FaEye className="me-2" />
                           </div>
                         </CTableDataCell>

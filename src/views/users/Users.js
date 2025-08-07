@@ -322,7 +322,7 @@ const Users = () => {
                 </CTableDataCell>
                 <CTableDataCell className="text-center">{user?.phone || 'N/A'}</CTableDataCell>
                 <CTableDataCell className="text-center">{user?.email || 'N/A'}</CTableDataCell>
-                <CTableDataCell className="text-center">{`${user?.age} / ${user?.gender_id?.name}`}</CTableDataCell>
+                <CTableDataCell className="text-center">{`${user?.age} / ${user?.gender}`}</CTableDataCell>
                 <CTableDataCell className="text-center">
                   <CDropdown alignment="end">
                     <CDropdownToggle

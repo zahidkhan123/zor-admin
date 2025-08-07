@@ -282,8 +282,6 @@ const EditProfile = () => {
       )
     }
 
-    debugger
-
     // Map new API response for fee and location
     if (feesandlocationData?.data) {
       // Map city from first location with city_id, if available
@@ -295,11 +293,9 @@ const EditProfile = () => {
       const filteredLocations = locationsArr.filter(
         (loc) => loc.type !== 'online' && loc.city_id !== null,
       )
-
       // Find first location with city_id for selectedCity
       const cityLocation = filteredLocations.find((loc) => loc.city_id)
       setSelectedCity(cityLocation?.city_id || '')
-
       // --- Begin: Always map all location types, even if empty ---
       // For each type in ALL_LOCATION_TYPES, find the location or create an empty one
       const mappedLocations = ALL_LOCATION_TYPES.map((locType) => {
@@ -312,7 +308,7 @@ const EditProfile = () => {
         }
         // If not found, return an empty location object for this type
         return {
-          location_id: `${locType.type.toLowerCase()}-empty`,
+          location_id: `${locType.type.toLowerCase()}`,
           type: locType.type,
           city_id: selectedCity || '',
           address: '',
@@ -425,9 +421,9 @@ const EditProfile = () => {
 
   // Location handlers for array of locations
   const handleLocationChange = (location_id, field, value) => {
-    setLocations((prev) =>
-      prev.map((loc) => (loc.location_id === location_id ? { ...loc, [field]: value } : loc)),
-    )
+    setLocations((prev) => {
+      return prev.map((loc) => (loc.location_id === location_id ? { ...loc, [field]: value } : loc))
+    })
   }
 
   // Fee handlers
@@ -516,6 +512,7 @@ const EditProfile = () => {
 
   const handleSaveLocationsAndFees = async () => {
     // Only include locations that have a city_id and are not online
+
     const filteredLocations = locations.filter(
       (loc) =>
         loc.type &&

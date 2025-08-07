@@ -115,14 +115,14 @@ const LawyerProfileForm = () => {
       setShowToast(true)
       return
     }
-    debugger
+
     const submitData = {
       ...formData,
       user_type: 'lawyer',
     }
-    debugger
+
     delete submitData.confirmPassword
-    debugger
+
     try {
       const response = await createLawyer(submitData).unwrap()
       if (response.success) {

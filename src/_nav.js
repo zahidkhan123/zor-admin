@@ -36,26 +36,26 @@ const _nav = [
         name: 'Verification Process',
         to: '/verification',
       },
+      // {
+      //   component: CNavItem,
+      //   name: 'Profile',
+      //   to: '/profile',
+      // },
+      // {
+      //   component: CNavItem,
+      //   name: 'All Lawyers',
+      //   to: '/lawyers',
+      // },
       {
         component: CNavItem,
-        name: 'Profile',
-        to: '/profile',
+        name: 'Profiles',
+        to: '/profile-setup',
       },
       {
         component: CNavItem,
         name: 'All Lawyers',
-        to: '/lawyers',
+        to: '/lawyers-list',
       },
-      // {
-      //   component: CNavItem,
-      //   name: 'Lawyers List',
-      //   to: '/lawyers-list',
-      // },
-      // {
-      //   component: CNavItem,
-      //   name: 'Profile Setup',
-      //   to: '/profile-setup',
-      // },
     ],
   },
   // {

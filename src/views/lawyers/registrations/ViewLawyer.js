@@ -38,7 +38,7 @@ const LawyerView = () => {
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
   const theme = useSelector((state) => state.ui.theme)
-
+  console.log('from', location.state?.from)
   // Fix: Ensure modal opens by using a function to set both modalType and showModal together
   const openModal = (type) => {
     setModalType(type)
@@ -85,6 +85,7 @@ const LawyerView = () => {
             modified: true,
             tab: location.state?.fromTab || (status === 'approved' ? 'approved' : 'rejected'),
             page: location.state?.fromPage || 1,
+            from: location.state?.from || 'registrations',
           },
         })
       } else {
@@ -260,33 +261,66 @@ const LawyerView = () => {
               rows={4}
               className="mb-3"
             />
-            <div className="d-flex gap-2 justify-content-end">
-              <CButton
-                color="danger"
-                onClick={() => {
-                  if (!note.trim()) {
-                    setToastMessage('Note is required to reject')
-                    setToastColor('danger')
-                    setShowToast(true)
-                    return
+            {/* Button Row: Back on left, Approve/Reject on right */}
+            <div className="row mt-2 align-items-center">
+              <div className="col-6 d-flex">
+                <CButton
+                  color="secondary"
+                  onClick={() =>
+                    navigate(
+                      location?.state?.from === 'verification'
+                        ? '/verification'
+                        : location?.state?.from === 'allLawyer'
+                          ? '/lawyers-list'
+                          : '/registration',
+                      {
+                        state: {
+                          tab: location?.state?.fromTab || 'pending',
+                          page: location?.state?.fromPage || 1,
+                          from: location?.state?.from || 'registrations',
+                        },
+                      },
+                    )
                   }
-                  openModal('reject')
-                }}
-                disabled={isLoading}
-              >
-                Reject
-              </CButton>
+                >
+                  ← Back
+                </CButton>
+              </div>
+              <div className="col-6 d-flex justify-content-end gap-2">
+                <CButton
+                  color="danger"
+                  onClick={() => {
+                    if (!note.trim()) {
+                      setToastMessage('Note is required to reject')
+                      setToastColor('danger')
+                      setShowToast(true)
+                      return
+                    }
+                    openModal('reject')
+                  }}
+                  disabled={isLoading}
+                >
+                  Reject
+                </CButton>
 
-              <CButton
-                color="success"
-                variant="outline"
-                onClick={() => {
-                  openModal('approve')
-                }}
-                disabled={isLoading}
-              >
-                Approve
-              </CButton>
+                <CButton
+                  color="success"
+                  variant="outline"
+                  onClick={() => {
+                    if (lawyer_details?.status !== 'approved') {
+                      openModal('approve')
+                    }
+                  }}
+                  disabled={isLoading || lawyer_details?.status === 'approved'}
+                  style={
+                    lawyer_details?.status === 'approved'
+                      ? { opacity: 0.6, pointerEvents: 'none', cursor: 'not-allowed' }
+                      : {}
+                  }
+                >
+                  Approve
+                </CButton>
+              </div>
             </div>
           </div>
         </CCardBody>

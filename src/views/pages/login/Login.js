@@ -88,7 +88,6 @@ const Login = () => {
     }
   }
 
-  // Rest of the component remains the same...
   return (
     <div className="d-flex min-vh-100">
       {/* Left Branding Section */}

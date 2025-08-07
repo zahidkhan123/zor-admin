@@ -20,17 +20,16 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPhone, cilEnvelopeClosed, cilCalendar, cilUser, cilBadge } from '@coreui/icons'
-import { useUpdateLawyerMutation } from '../../../services/api'
+import { useUpdateLawyerStatusMutation } from '../../../services/api'
 import { fetchSignedUrl } from '../../../assets/utils/imageUtils'
-import { DynamicModal } from '../../../components'
+import { AppBreadcrumb, DynamicModal } from '../../../components'
 import { useSelector } from 'react-redux'
 
 const ViewProfileSetup = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const [updateLawyer, { isLoading, isSuccess }] = useUpdateLawyerMutation()
+  const [updateLawyer, { isLoading, isSuccess }] = useUpdateLawyerStatusMutation()
   const lawyer = location.state?.lawyer
-  const [note, setNote] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [toastColor, setToastColor] = useState('success')
@@ -65,22 +64,15 @@ const ViewProfileSetup = () => {
 
   const handleStatusChange = async (status) => {
     try {
-      const updateData = {
-        lawyer_id: lawyer._id,
-        status,
-      }
-
-      if (note.trim()) {
-        updateData.note = note
-      }
-
-      const result = await updateLawyer(updateData)
+      console.log('status', status)
+      console.log('lawyer', lawyer)
+      const result = await updateLawyer({ _id: lawyer._id, status })
 
       if (result?.data?.success === true) {
         setToastMessage(`Lawyer ${status} successfully`)
         setToastColor('success')
         setShowToast(true)
-        navigate('/registration', { state: { modified: true } })
+        navigate('/profile-setup', { state: { modified: true } })
       } else {
         setToastMessage(result?.data?.message)
         setToastColor('danger')
@@ -95,7 +87,7 @@ const ViewProfileSetup = () => {
   }
 
   const handleModalConfirm = () => {
-    const status = modalType === 'approve' ? 'approved' : 'rejected'
+    const status = modalType === 'active' ? 'active' : 'paused'
     handleStatusChange(status)
     setShowModal(false)
   }
@@ -117,7 +109,7 @@ const ViewProfileSetup = () => {
           </CToast>
         )}
       </CToaster>
-
+      <AppBreadcrumb />
       <CCard className="mb-4 shadow-lg border-0">
         <CCardHeader className="bg-gradient-warning py-3">
           {theme === 'light' ? (
@@ -246,25 +238,19 @@ const ViewProfileSetup = () => {
           )}
 
           <div className="mt-4">
-            <h5 className="mb-3">Add Notes</h5>
+            {/* <h5 className="mb-3">Add Notes</h5>
             <CFormTextarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Enter notes here..."
               rows={4}
               className="mb-3"
-            />
+            /> */}
             <div className="d-flex gap-2 justify-content-end">
               <CButton
                 color="danger"
                 onClick={() => {
-                  if (!note.trim()) {
-                    setToastMessage('Note is required to reject')
-                    setToastColor('danger')
-                    setShowToast(true)
-                    return
-                  }
-                  openModal('reject')
+                  openModal('paused')
                 }}
                 disabled={isLoading}
               >
@@ -275,7 +261,7 @@ const ViewProfileSetup = () => {
                 color="success"
                 variant="outline"
                 onClick={() => {
-                  openModal('approve')
+                  openModal('active')
                 }}
                 disabled={isLoading}
               >
@@ -287,14 +273,14 @@ const ViewProfileSetup = () => {
       </CCard>
       <DynamicModal
         visible={showModal}
-        iconType={modalType === 'approve' ? 'success' : 'danger'}
-        message={`Are you sure you want to ${modalType === 'approve' ? 'approve' : 'reject'} this lawyer?`}
-        confirmLabel={modalType === 'approve' ? 'Approve' : 'Reject'}
-        cancelLabel={modalType === 'approve' ? 'Cancel' : 'Close'}
+        iconType={modalType === 'active' ? 'success' : 'danger'}
+        message={`Are you sure you want to ${modalType === 'active' ? 'active' : 'paused'} this lawyer?`}
+        confirmLabel={modalType === 'active' ? 'Active' : 'Paused'}
+        cancelLabel={modalType === 'active' ? 'Cancel' : 'Close'}
         onCancel={() => setShowModal(false)}
         onConfirm={handleModalConfirm}
-        confirmColor={modalType === 'approve' ? 'success' : 'warning'}
-        cancelColor={modalType === 'approve' ? 'warning' : 'warning'}
+        confirmColor={modalType === 'active' ? 'success' : 'warning'}
+        cancelColor={modalType === 'active' ? 'warning' : 'warning'}
       />
     </>
   )

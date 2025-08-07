@@ -25,6 +25,7 @@ import {
   CNavLink,
   CWidgetStatsC,
   CFormInput,
+  CBadge,
 } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
@@ -50,6 +51,22 @@ const ProfileSetup = () => {
   const [toastMessage, setToastMessage] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [citySearchTerm, setCitySearchTerm] = useState('')
+  const [debouncedCitySearchTerm, setDebouncedCitySearchTerm] = useState('')
+
+  // New: Track if we are loading due to pagination or tab change
+  const [tableLoading, setTableLoading] = useState(false)
+  // Track last query params to detect when loading is due to pagination/tab/search/city
+  const [lastQuery, setLastQuery] = useState({
+    page: 1,
+    status: 'new',
+    search: '',
+    city: '',
+  })
+
+  const handleCitySearchChange = (e) => {
+    setCitySearchTerm(e.target.value)
+  }
 
   // Debounce search term to avoid too many API calls
   useEffect(() => {
@@ -62,12 +79,48 @@ const ProfileSetup = () => {
     }
   }, [searchTerm])
 
-  const { data, error, isLoading, refetch } = useGetLawyersProfileSetupQuery({
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedCitySearchTerm(citySearchTerm)
+    }, 500)
+
+    return () => {
+      clearTimeout(timerId)
+    }
+  }, [citySearchTerm])
+
+  // Detect if we are loading due to pagination, tab, search, or city change
+  useEffect(() => {
+    // Only set tableLoading to true if any of the query params change
+    if (
+      lastQuery.page !== currentPage ||
+      lastQuery.status !== activeTab ||
+      lastQuery.search !== debouncedSearchTerm ||
+      lastQuery.city !== debouncedCitySearchTerm
+    ) {
+      setLastQuery({
+        page: currentPage,
+        status: activeTab,
+        search: debouncedSearchTerm,
+        city: debouncedCitySearchTerm,
+      })
+    }
+  }, [currentPage, activeTab, debouncedSearchTerm, debouncedCitySearchTerm]) // eslint-disable-line
+
+  const { data, error, isLoading, refetch, isFetching } = useGetLawyersProfileSetupQuery({
     page: currentPage,
     limit: PAGE_SIZE,
     status: activeTab,
     search: debouncedSearchTerm,
+    city: debouncedCitySearchTerm || undefined,
   })
+
+  // When fetching is done, hide the table loader
+  useEffect(() => {
+    if (!isFetching) {
+      setTableLoading(false)
+    }
+  }, [isFetching])
 
   const paginatedLawyers = data?.data?.lawyers || []
   // Fix: Make sure totalPages is at least 1 if there are lawyers, otherwise 0
@@ -176,7 +229,8 @@ const ProfileSetup = () => {
     return items
   }
 
-  if (isLoading) {
+  // Only show full page loader on first load
+  if (isLoading && !tableLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
         <CSpinner color="warning" style={{ width: '4rem', height: '4rem' }} variant="grow" />
@@ -245,16 +299,33 @@ const ProfileSetup = () => {
 
       <CCardBody>
         <CRow className="align-items-center mb-3">
-          <CCol xs={12} md={6} className="mb-2">
-            <CButton
+          <CCol xs={12} md={4} className="mb-2">
+            {/* <CButton
               color="warning"
               onClick={() => navigate('/lawyers/add', { state: { mode: 'add' } })}
             >
               <CIcon icon={cilPlus} className="me-2" />
               Add New Lawyer
-            </CButton>
+            </CButton> */}
           </CCol>
-          <CCol xs={12} md={6} className="mb-2">
+          <CCol xs={12} md={4} className="mb-2">
+            <div className="position-relative" style={{ maxWidth: '600px' }}>
+              <CIcon
+                icon={cilSearch}
+                className="position-absolute"
+                style={{ top: '17px', left: '15px', zIndex: 10 }}
+              />
+              <CFormInput
+                type="text"
+                placeholder="Search by city..."
+                value={citySearchTerm}
+                onChange={handleCitySearchChange}
+                className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+              />
+            </div>
+          </CCol>
+          <CCol xs={12} md={4} className="mb-2">
             <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
               <CIcon
                 icon={cilSearch}
@@ -285,98 +356,115 @@ const ProfileSetup = () => {
           ))}
         </CNav>
 
-        <CTable align="middle" className="mb-0 border" hover responsive>
-          <CTableHead className="text-nowrap">
-            <CTableRow>
-              <CTableHeaderCell className="bg-body-tertiary text-center">ID</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">Lawyer</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">Phone</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">Email</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">Status</CTableHeaderCell>
-              <CTableHeaderCell className="bg-body-tertiary text-center">Action</CTableHeaderCell>
-            </CTableRow>
-          </CTableHead>
-          <CTableBody>
-            {paginatedLawyers.length > 0 ? (
-              paginatedLawyers.map((lawyer) => (
-                <CTableRow
-                  key={lawyer._id}
-                  onClick={() =>
-                    navigate(`/profile-setup/view/${lawyer._id}`, { state: { lawyer } })
-                  }
-                  style={{ cursor: 'pointer' }}
-                >
-                  <CTableDataCell className="text-center">
-                    {lawyer?._id?.slice(-5)?.toUpperCase()}
-                  </CTableDataCell>
-                  <CTableDataCell className="text-center">
-                    <div className="d-flex align-items-center justify-content-center">
-                      <CAvatar size="md" src={lawyer?.image} />
-                      <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
-                        {lawyer?.name}
-                      </div>
-                    </div>
-                  </CTableDataCell>
-                  <CTableDataCell className="text-center">{lawyer?.phone}</CTableDataCell>
-                  <CTableDataCell className="text-center">{lawyer?.email}</CTableDataCell>
-                  <CTableDataCell className="text-center">
-                    <span
-                      className={`badge rounded-pill px-3 py-2 ${
-                        lawyer?.is_live === 'active'
-                          ? 'bg-success'
-                          : lawyer?.is_live === 'paused'
-                            ? 'bg-warning text-dark'
-                            : 'bg-secondary'
-                      }`}
-                      style={{ fontSize: '0.95rem' }}
-                    >
-                      {lawyer?.is_live === 'active'
-                        ? 'Active'
-                        : lawyer?.is_live === 'paused'
-                          ? 'Paused'
-                          : lawyer?.is_live === 'pending'
-                            ? 'Pending'
-                            : lawyer?.is_live || 'Unknown'}
-                    </span>
-                  </CTableDataCell>
-                  <CTableDataCell className="text-center">
-                    <CDropdown alignment="end">
-                      <span style={{ fontSize: '24px', cursor: 'pointer' }}>⋮</span>
-                    </CDropdown>
-                  </CTableDataCell>
-                </CTableRow>
-              ))
-            ) : (
-              <CTableRow>
-                <CTableDataCell colSpan={6} className="text-center py-4">
-                  {debouncedSearchTerm ? 'No matching lawyers found.' : 'No lawyers found.'}
-                </CTableDataCell>
-              </CTableRow>
-            )}
-          </CTableBody>
-        </CTable>
-
-        {/* Pagination: Only show if there are lawyers and more than 1 page */}
-        {paginatedLawyers.length > 0 && totalPages > 1 && (
-          <div className="d-flex justify-content-end mt-3 me-3">
-            <CPagination>
-              <CPaginationItem
-                aria-label="Previous"
-                disabled={currentPage === 1}
-                onClick={() => handlePageChange(currentPage - 1)}
-              >
-                &laquo;
-              </CPaginationItem>
-              {renderPaginationItems()}
-              <CPaginationItem
-                aria-label="Next"
-                disabled={currentPage === totalPages}
-                onClick={() => handlePageChange(currentPage + 1)}
-              >
-                &raquo;
-              </CPaginationItem>
-            </CPagination>
+        {/* Loader inside the tabs/table area when paginating or tab/search/city changes */}
+        {isFetching ? (
+          <div
+            className="d-flex justify-content-center align-items-center"
+            style={{ minHeight: '300px' }}
+          >
+            <CSpinner color="warning" style={{ width: '3rem', height: '3rem' }} variant="grow" />
           </div>
+        ) : (
+          <>
+            <CTable align="middle" className="mb-0 border" hover responsive>
+              <CTableHead className="text-nowrap">
+                <CTableRow>
+                  <CTableHeaderCell className="bg-body-tertiary text-center">ID</CTableHeaderCell>
+                  <CTableHeaderCell className="bg-body-tertiary text-center">
+                    Lawyer
+                  </CTableHeaderCell>
+                  <CTableHeaderCell className="bg-body-tertiary text-center">
+                    Phone
+                  </CTableHeaderCell>
+                  <CTableHeaderCell className="bg-body-tertiary text-center">
+                    Email
+                  </CTableHeaderCell>
+                  <CTableHeaderCell className="bg-body-tertiary text-center">
+                    Status
+                  </CTableHeaderCell>
+                  <CTableHeaderCell className="bg-body-tertiary text-center">
+                    Action
+                  </CTableHeaderCell>
+                </CTableRow>
+              </CTableHead>
+              <CTableBody>
+                {paginatedLawyers.length > 0 ? (
+                  paginatedLawyers.map((lawyer) => (
+                    <CTableRow
+                      key={lawyer._id}
+                      onClick={() => navigate(`/profile/edit/${lawyer._id}`, { state: { lawyer } })}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <CTableDataCell className="text-center">
+                        {lawyer?._id?.slice(-5)?.toUpperCase()}
+                      </CTableDataCell>
+                      <CTableDataCell className="text-center">
+                        <div className="d-flex align-items-center justify-content-center">
+                          <CAvatar size="md" src={lawyer?.image} />
+                          <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
+                            {lawyer?.name}
+                          </div>
+                        </div>
+                      </CTableDataCell>
+                      <CTableDataCell className="text-center">{lawyer?.phone}</CTableDataCell>
+                      <CTableDataCell className="text-center">{lawyer?.email}</CTableDataCell>
+                      <CTableDataCell className="text-center">
+                        <CBadge
+                          color={
+                            lawyer.is_live === 'pending'
+                              ? 'warning'
+                              : lawyer.is_live === 'active'
+                                ? 'success'
+                                : lawyer.is_live === 'paused'
+                                  ? 'danger'
+                                  : lawyer.is_live === 'rejected'
+                                    ? 'warning'
+                                    : 'secondary'
+                          }
+                        >
+                          {lawyer.is_live}
+                        </CBadge>
+                      </CTableDataCell>
+                      <CTableDataCell className="text-center">
+                        <CDropdown alignment="end">
+                          <span style={{ fontSize: '24px', cursor: 'pointer' }}>⋮</span>
+                        </CDropdown>
+                      </CTableDataCell>
+                    </CTableRow>
+                  ))
+                ) : (
+                  <CTableRow>
+                    <CTableDataCell colSpan={6} className="text-center py-4">
+                      {debouncedSearchTerm ? 'No matching lawyers found.' : 'No lawyers found.'}
+                    </CTableDataCell>
+                  </CTableRow>
+                )}
+              </CTableBody>
+            </CTable>
+
+            {/* Pagination: Only show if there are lawyers and more than 1 page */}
+            {paginatedLawyers.length > 0 && totalPages > 1 && (
+              <div className="d-flex justify-content-end mt-3 me-3">
+                <CPagination>
+                  <CPaginationItem
+                    aria-label="Previous"
+                    disabled={currentPage === 1}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                  >
+                    &laquo;
+                  </CPaginationItem>
+                  {renderPaginationItems()}
+                  <CPaginationItem
+                    aria-label="Next"
+                    disabled={currentPage === totalPages}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                  >
+                    &raquo;
+                  </CPaginationItem>
+                </CPagination>
+              </div>
+            )}
+          </>
         )}
       </CCard>
     </>

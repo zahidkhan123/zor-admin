@@ -25,6 +25,7 @@ import {
   CNavLink,
   CWidgetStatsC,
   CFormInput,
+  CBadge,
 } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
@@ -50,6 +51,11 @@ const AllLawyers = () => {
   const [toastMessage, setToastMessage] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [citySearchTerm, setCitySearchTerm] = useState('')
+  const [debouncedCitySearchTerm, setDebouncedCitySearchTerm] = useState('')
+  const handleCitySearchChange = (e) => {
+    setCitySearchTerm(e.target.value)
+  }
 
   // Debounce search term to avoid too many API calls
   useEffect(() => {
@@ -62,11 +68,23 @@ const AllLawyers = () => {
     }
   }, [searchTerm])
 
-  const { data, error, isLoading, refetch } = useGetLawyersStatusQuery({
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedCitySearchTerm(citySearchTerm)
+    }, 500)
+
+    return () => {
+      clearTimeout(timerId)
+    }
+  }, [citySearchTerm])
+
+  // Add isFetching to destructure for refetch loader
+  const { data, error, isLoading, isFetching, refetch } = useGetLawyersStatusQuery({
     page: currentPage,
     limit: PAGE_SIZE,
     status: activeTab,
     search: debouncedSearchTerm,
+    city: debouncedCitySearchTerm || undefined,
   })
 
   const paginatedLawyers = data?.data?.lawyers || []
@@ -242,19 +260,35 @@ const AllLawyers = () => {
           </CCol>
         </CRow>
       </CCard>
-
       <CCardBody>
         <CRow className="align-items-center mb-3">
-          <CCol xs={12} md={6} className="mb-2">
-            <CButton
+          <CCol xs={12} md={4} className="mb-2">
+            {/* <CButton
               color="warning"
               onClick={() => navigate('/lawyers/add', { state: { mode: 'add' } })}
             >
               <CIcon icon={cilPlus} className="me-2" />
               Add New Lawyer
-            </CButton>
+            </CButton> */}
           </CCol>
-          <CCol xs={12} md={6} className="mb-2">
+          <CCol xs={12} md={4} className="mb-2">
+            <div className="position-relative" style={{ maxWidth: '600px' }}>
+              <CIcon
+                icon={cilSearch}
+                className="position-absolute"
+                style={{ top: '17px', left: '15px', zIndex: 10 }}
+              />
+              <CFormInput
+                type="text"
+                placeholder="Search by city..."
+                value={citySearchTerm}
+                onChange={handleCitySearchChange}
+                className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+              />
+            </div>
+          </CCol>
+          <CCol xs={12} md={4} className="mb-2">
             <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
               <CIcon
                 icon={cilSearch}
@@ -297,12 +331,23 @@ const AllLawyers = () => {
             </CTableRow>
           </CTableHead>
           <CTableBody>
-            {paginatedLawyers.length > 0 ? (
+            {/* Loader row if refetching */}
+            {isFetching ? (
+              <CTableRow>
+                <CTableDataCell colSpan={6} className="text-center py-4">
+                  <CSpinner
+                    color="warning"
+                    style={{ width: '3rem', height: '3rem' }}
+                    variant="grow"
+                  />
+                </CTableDataCell>
+              </CTableRow>
+            ) : paginatedLawyers.length > 0 ? (
               paginatedLawyers.map((lawyer) => (
                 <CTableRow
                   key={lawyer._id}
                   onClick={() =>
-                    navigate(`/lawyers-list/view/${lawyer._id}`, { state: { lawyer } })
+                    navigate(`/profile-setup/view/${lawyer._id}`, { state: { lawyer } })
                   }
                   style={{ cursor: 'pointer' }}
                 >
@@ -320,24 +365,21 @@ const AllLawyers = () => {
                   <CTableDataCell className="text-center">{lawyer?.phone}</CTableDataCell>
                   <CTableDataCell className="text-center">{lawyer?.email}</CTableDataCell>
                   <CTableDataCell className="text-center">
-                    <span
-                      className={`badge rounded-pill px-3 py-2 ${
-                        lawyer?.is_live === 'active'
-                          ? 'bg-success'
-                          : lawyer?.is_live === 'paused'
-                            ? 'bg-warning text-dark'
-                            : 'bg-secondary'
-                      }`}
-                      style={{ fontSize: '0.95rem' }}
+                    <CBadge
+                      color={
+                        lawyer.is_live === 'pending'
+                          ? 'warning'
+                          : lawyer.is_live === 'active'
+                            ? 'success'
+                            : lawyer.is_live === 'paused'
+                              ? 'danger'
+                              : lawyer.is_live === 'rejected'
+                                ? 'warning'
+                                : 'secondary'
+                      }
                     >
-                      {lawyer?.is_live === 'active'
-                        ? 'Active'
-                        : lawyer?.is_live === 'paused'
-                          ? 'Paused'
-                          : lawyer?.is_live === 'pending'
-                            ? 'Pending'
-                            : lawyer?.is_live || 'Unknown'}
-                    </span>
+                      {lawyer.is_live}
+                    </CBadge>
                   </CTableDataCell>
                   <CTableDataCell className="text-center">
                     <CDropdown alignment="end">
@@ -347,11 +389,13 @@ const AllLawyers = () => {
                 </CTableRow>
               ))
             ) : (
-              <CTableRow>
-                <CTableDataCell colSpan={6} className="text-center py-4">
-                  {debouncedSearchTerm ? 'No matching lawyers found.' : 'No lawyers found.'}
-                </CTableDataCell>
-              </CTableRow>
+              !isFetching && (
+                <CTableRow>
+                  <CTableDataCell colSpan={6} className="text-center py-4">
+                    {debouncedSearchTerm ? 'No matching lawyers found.' : 'No lawyers found.'}
+                  </CTableDataCell>
+                </CTableRow>
+              )
             )}
           </CTableBody>
         </CTable>

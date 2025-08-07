@@ -101,7 +101,7 @@ const App = () => {
               </ProtectedRoute>
             }
           >
-            <Route path="dashboard" element={<Dashboard />} />
+            <Route index element={<Dashboard />} />
             {/* <Route path="theme/colors" element={<Colors />} /> */}
             {/* User routes */}
             <Route path="users" element={<Users />} />

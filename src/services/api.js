@@ -12,7 +12,7 @@ const getToken = () => {
 
 // Create axios instance
 const axiosInstance = axios.create({
-  baseURL: 'https://zor-development.onrender.com/api/v1',
+  baseURL: 'http://localhost:3000/api/v1',
   headers: {
     Authorization: `Bearer ${getToken()}`,
   },
@@ -184,15 +184,27 @@ export const api = createApi({
       }),
     }),
     getLawyersStatus: builder.query({
-      query: ({ page = 1, limit = 10, status = null, search = null }) => ({
+      query: ({ page = 1, limit = 10, status = null, search = null, city = null }) => ({
         url: '/admin/lawyers/lawyer-status',
-        params: { page, limit, ...(status && { status }), ...(search && { search }) },
+        params: {
+          page,
+          limit,
+          ...(status && { status }),
+          ...(search && { search }),
+          ...(city && { city }),
+        },
       }),
     }),
     getLawyersProfileSetup: builder.query({
-      query: ({ page = 1, limit = 10, status = null, search = null }) => ({
-        url: '/admin/lawyers/profile-setup',
-        params: { page, limit, ...(status && { status }), ...(search && { search }) },
+      query: ({ page = 1, limit = 10, status = null, search = null, city = null }) => ({
+        url: '/admin/lawyers/profile-setup-status',
+        params: {
+          page,
+          limit,
+          ...(status && { status }),
+          ...(search && { search }),
+          ...(city && { city }),
+        },
       }),
     }),
     getDays: builder.query({
@@ -211,6 +223,13 @@ export const api = createApi({
       query: () => ({
         url: '/admin/dropdowns?type=Slot',
         method: 'GET',
+      }),
+    }),
+    updateLawyerStatus: builder.mutation({
+      query: (lawyer) => ({
+        url: `/admin/lawyers/${lawyer._id}/profile-setup-status`,
+        method: 'PUT',
+        body: { status: lawyer.status },
       }),
     }),
   }),
@@ -244,4 +263,5 @@ export const {
   useGetDaysQuery,
   useGetLocationsQuery,
   useGetSlotsQuery,
+  useUpdateLawyerStatusMutation,
 } = api

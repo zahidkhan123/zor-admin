@@ -108,14 +108,14 @@ const UserProfileForm = () => {
       setShowToast(true)
       return
     }
-    debugger
+
     const submitData = {
       ...formData,
       user_type: 'guest',
     }
-    debugger
+
     delete submitData.confirmPassword
-    debugger
+
     try {
       const response = await createUser(submitData).unwrap()
       if (response.success) {

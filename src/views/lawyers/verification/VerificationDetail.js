@@ -21,7 +21,7 @@ import {
 import { CTooltip } from '@coreui/react'
 import { cilCheckCircle, cilClock, cilFlagAlt } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
   useGetVerificationByIdQuery,
   useVerifyLawyerMutation,
@@ -35,6 +35,19 @@ import { DynamicModal } from '../../../components'
 const LawyerVerification = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { fromTab, fromPage, searchTerm } = location.state || {}
+  console.log(location.state)
+  console.log(fromTab, fromPage, searchTerm)
+  const handleBack = () => {
+    navigate('/verification', {
+      state: {
+        fromTab,
+        fromPage,
+        searchTerm,
+      },
+    })
+  }
   const { data, isLoading, error, refetch } = useGetVerificationByIdQuery(id, {
     refetchOnMountOrArgChange: true,
   })
@@ -196,7 +209,14 @@ const LawyerVerification = () => {
         initializeDocumentStatus(updated.data.data)
       }
       // Navigate back with refresh flag
-      navigate('/verification', { state: { refresh: true } })
+      navigate('/verification', {
+        state: {
+          fromTab,
+          fromPage,
+          searchTerm,
+          refresh: true,
+        },
+      })
     } catch (error) {
       console.error(error)
       triggerToast('Failed to update verification status', 'danger')
@@ -342,7 +362,7 @@ const LawyerVerification = () => {
                 <div className="d-flex align-items-center">
                   <i className="fas fa-venus-mars me-2 text-muted"></i>
                   <span className="text-muted">Gender:</span>
-                  <span className="ms-2 fw-medium">{lawyer?.gender?.name}</span>
+                  <span className="ms-2 fw-medium">{lawyer?.gender_id?.name}</span>
                 </div>
               </div>
             </CCol>
@@ -448,19 +468,25 @@ const LawyerVerification = () => {
               onChange={handleNoteChange}
             />
           </div>
-
-          {isSaving ? (
-            <div className="d-flex justify-content-end mt-4">
-              <CSpinner size="sm" className="me-2" />
-              <span>Saving...</span>
-            </div>
-          ) : (
-            <div className="d-flex justify-content-end mt-4">
-              <CButton color="success" onClick={handleSave}>
-                Save
+          <div className="d-flex justify-content-between mt-4">
+            <div>
+              <CButton color="secondary" onClick={handleBack}>
+                Back
               </CButton>
             </div>
-          )}
+            <div>
+              {isSaving ? (
+                <div className="d-flex align-items-center">
+                  <CSpinner size="sm" className="me-2" />
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                <CButton color="success" onClick={handleSave}>
+                  Save
+                </CButton>
+              )}
+            </div>
+          </div>
 
           <CModal visible={showModal} onClose={() => setShowModal(false)} size="lg">
             <CModalHeader onClose={() => setShowModal(false)}>
