@@ -58,12 +58,12 @@ const _nav = [
       },
     ],
   },
-  // {
-  //   component: CNavItem,
-  //   name: 'Bookings',
-  //   to: '/bookings',
-  //   icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
-  // },
+  {
+    component: CNavItem,
+    name: 'Bookings',
+    to: '/bookings',
+    icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
+  },
   {
     component: CNavItem,
     name: 'Admin',

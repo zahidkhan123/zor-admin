@@ -51,6 +51,7 @@ const SetAvailability = React.lazy(() => import('./views/lawyers/profile/SetAvai
   /*Bookings routes */
 }
 const Bookings = React.lazy(() => import('./views/bookings/bookings'))
+const BookingDetail = React.lazy(() => import('./views/bookings/BookingDetail'))
 
 const routes = [
   // { path: '/', exact: true, name: 'Home' },
@@ -83,6 +84,7 @@ const routes = [
   { path: '/profile/set-availability', name: 'Set Availability', element: SetAvailability },
 
   { path: '/bookings', name: 'Bookings', element: Bookings },
+  { path: '/bookings/detail/:id', name: 'Booking Detail', element: BookingDetail },
 ]
 
 export default routes

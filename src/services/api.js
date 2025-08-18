@@ -178,9 +178,14 @@ export const api = createApi({
       }),
     }),
     getBookings: builder.query({
-      query: ({ page = 1, limit = 10, type = null, search = null }) => ({
+      query: ({ page = 1, limit = 10, status = null, search = null }) => ({
         url: '/admin/bookings',
-        params: { page, limit, ...(type && { type }), ...(search && { search }) },
+        params: {
+          page,
+          limit,
+          ...(status && { status: status }),
+          ...(search && { search }),
+        },
       }),
     }),
     getLawyersStatus: builder.query({

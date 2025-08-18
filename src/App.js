@@ -57,6 +57,7 @@ const ViewProfileSetup = React.lazy(() => import('./views/lawyers/ProfileSetupSt
   /*Bookings routes */
 }
 const Bookings = React.lazy(() => import('./views/bookings/bookings'))
+const BookingDetail = React.lazy(() => import('./views/bookings/BookingDetail'))
 
 // Components
 const ProtectedRoute = React.lazy(() => import('./components/ProtectedRoute'))
@@ -132,6 +133,7 @@ const App = () => {
             <Route path="profile-setup/view/:id" element={<ViewProfileSetup />} />
             {/* Bookings routes */}
             <Route path="bookings" element={<Bookings />} />
+            <Route path="bookings/detail/:id" element={<BookingDetail />} />
           </Route>
 
           {/* Catch-all */}

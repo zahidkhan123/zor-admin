@@ -1,217 +1,459 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
+  CRow,
+  CCol,
   CCard,
   CCardBody,
-  CNav,
-  CNavItem,
-  CNavLink,
-  CTabContent,
-  CTabPane,
   CTable,
-  CTableHead,
-  CTableRow,
-  CTableHeaderCell,
   CTableBody,
   CTableDataCell,
+  CTableHead,
+  CTableHeaderCell,
+  CTableRow,
   CAvatar,
   CPagination,
   CPaginationItem,
-  CBadge,
-  CSpinner,
-  CFormInput,
-  CInputGroup,
-  CInputGroupText,
+  CDropdown,
   CButton,
+  CSpinner,
+  CToaster,
+  CToast,
+  CToastBody,
+  CToastClose,
+  CNav,
+  CNavItem,
+  CNavLink,
+  CWidgetStatsC,
+  CFormInput,
+  CBadge,
 } from '@coreui/react'
-import { useNavigate } from 'react-router-dom'
-import { FaEye, FaSearch, FaPlus } from 'react-icons/fa'
+import { useNavigate, useLocation } from 'react-router-dom'
+import CIcon from '@coreui/icons-react'
+import { cilPeople, cilUserFollow, cilPlus, cilSearch, cilCalendar } from '@coreui/icons'
 import { useGetBookingsQuery } from '../../services/api'
-import { debounce } from 'lodash'
+import { FaCheckCircle } from 'react-icons/fa'
 
-const statusTabs = {
-  1: 'Pending',
-  2: 'Verified',
-  3: 'Rejected',
-}
+const tabs = [
+  { key: 'confirmed', label: 'Upcoming' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' },
+  { key: 'all', label: 'All Bookings' },
+]
 
-const Tabs = ({ path }) => {
+const PAGE_SIZE = 10 // Changed to match backend default
+
+const Bookings = () => {
   const navigate = useNavigate()
-  const [activeKey, setActiveKey] = useState(1)
-  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10, search: '' })
+  const location = useLocation()
+  const { modified } = location.state || {}
+  const [activeTab, setActiveTab] = useState('confirmed')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const inputRef = useRef(null)
-
-  const { data, isLoading } = useGetBookingsQuery({
-    ...queryParams,
-    status: statusTabs[activeKey],
-  })
-
-  const tableData = data?.data?.results || []
-  const totalPages = data?.data?.totalPages || 0
-
-  useEffect(() => {
-    setQueryParams((prev) => ({ ...prev, page: 1 }))
-  }, [activeKey, searchTerm])
-
-  // Debounced search function
-  // Note: useRef to persist debounce function across renders
-  const debouncedSearch = useRef(
-    debounce((term) => {
-      setQueryParams((prev) => ({ ...prev, search: term }))
-    }, 500),
-  ).current
-
-  const onSearchChange = (e) => {
-    const value = e.target.value
-    setSearchTerm(value)
-    debouncedSearch(value)
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [citySearchTerm, setCitySearchTerm] = useState('')
+  const [debouncedCitySearchTerm, setDebouncedCitySearchTerm] = useState('')
+  const handleCitySearchChange = (e) => {
+    setCitySearchTerm(e.target.value)
   }
 
-  // Fix: Ensure input is always visible by not conditionally rendering it and not hiding it with CSS
-  // Also, ensure CInputGroup.Text is imported and used correctly
+  // Debounce search term to avoid too many API calls
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 500)
 
-  const renderNoData = () => (
-    <CTableRow>
-      <CTableDataCell colSpan="7" className="text-center py-4">
-        <div className="d-flex flex-column align-items-center">
-          <i className="fas fa-inbox fa-3x text-muted mb-3"></i>
-          <h5 className="text-muted">No Data Found</h5>
-          <p className="text-muted mb-0">There are no records to display in this section.</p>
+    return () => {
+      clearTimeout(timerId)
+    }
+  }, [searchTerm])
+
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setDebouncedCitySearchTerm(citySearchTerm)
+    }, 500)
+
+    return () => {
+      clearTimeout(timerId)
+    }
+  }, [citySearchTerm])
+
+  // Replace with bookings API call
+  // For demonstration, using the same hook, but you should replace with the correct bookings API hook
+  const { data, error, isLoading, isFetching, refetch } = useGetBookingsQuery({
+    page: currentPage,
+    limit: PAGE_SIZE,
+    status: activeTab,
+    search: debouncedSearchTerm,
+    city: debouncedCitySearchTerm || undefined,
+  })
+
+  // Map bookings data from API response
+  const bookings = data?.data?.bookings || []
+  const summary = data?.data?.summary || {}
+  const pagination = data?.data?.pagination || {}
+
+  const totalPages =
+    pagination?.totalPages !== undefined ? pagination.totalPages : bookings.length > 0 ? 1 : 0
+
+  useEffect(() => {
+    if (location?.state?.tab) {
+      setActiveTab(location.state.tab)
+      window.history.replaceState({}, document.title)
+    }
+  }, [location?.state?.tab])
+
+  useEffect(() => {
+    if (location?.state?.lawyerAdded) {
+      setToastMessage('Lawyer registered successfully!')
+      setToastVisible(true)
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
+
+  useEffect(() => {
+    if (modified || location?.state?.tab) {
+      refetch()
+      setToastMessage('Lawyer updated successfully!')
+      setToastVisible(true)
+      window.history.replaceState({}, document.title)
+    }
+  }, [modified, location?.state?.tab, refetch])
+
+  // Reset to page 1 when tab or search term changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, debouncedSearchTerm])
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value)
+  }
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page)
+    }
+  }
+
+  // Improved pagination rendering for all edge cases
+  const renderPaginationItems = () => {
+    const items = []
+    if (totalPages <= 1) return items
+
+    // Always show first page
+    items.push(
+      <CPaginationItem key={1} active={currentPage === 1} onClick={() => handlePageChange(1)}>
+        1
+      </CPaginationItem>,
+    )
+
+    // Show ellipsis if needed
+    if (currentPage > 3) {
+      items.push(
+        <CPaginationItem key="ellipsis1" disabled>
+          ...
+        </CPaginationItem>,
+      )
+    }
+
+    // Show pages around current page
+    for (
+      let i = Math.max(2, currentPage - 1);
+      i <= Math.min(totalPages - 1, currentPage + 1);
+      i++
+    ) {
+      items.push(
+        <CPaginationItem key={i} active={currentPage === i} onClick={() => handlePageChange(i)}>
+          {i}
+        </CPaginationItem>,
+      )
+    }
+
+    // Show ellipsis if needed
+    if (currentPage < totalPages - 2) {
+      items.push(
+        <CPaginationItem key="ellipsis2" disabled>
+          ...
+        </CPaginationItem>,
+      )
+    }
+
+    // Always show last page if more than 1
+    if (totalPages > 1) {
+      items.push(
+        <CPaginationItem
+          key={totalPages}
+          active={currentPage === totalPages}
+          onClick={() => handlePageChange(totalPages)}
+        >
+          {totalPages}
+        </CPaginationItem>,
+      )
+    }
+
+    return items
+  }
+
+  if (isLoading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+        <CSpinner color="warning" style={{ width: '4rem', height: '4rem' }} variant="grow" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+        <div className="text-danger">
+          <CIcon icon={cilPeople} height={36} className="mb-2" />
+          <h4>Error fetching bookings</h4>
         </div>
-      </CTableDataCell>
-    </CTableRow>
-  )
+      </div>
+    )
+  }
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-        <CNav variant="tabs">
-          <CNavItem>
-            <CNavLink active={activeKey === 1} onClick={() => setActiveKey(1)}>
-              Completed Bookings
-            </CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink active={activeKey === 2} onClick={() => setActiveKey(2)}>
-              Cancelled Bookings
-            </CNavLink>
-          </CNavItem>
-          <CNavItem>
-            <CNavLink active={activeKey === 3} onClick={() => setActiveKey(3)}>
-              Upcoming Bookings
-            </CNavLink>
-          </CNavItem>
+      <CToaster placement="top-end" className="mt-4">
+        {toastVisible && (
+          <CToast
+            autohide={true}
+            color="success"
+            className="border-0 shadow-lg"
+            visible={true}
+            style={{
+              background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+              color: '#fff',
+              borderRadius: '0.75rem',
+              minWidth: '320px',
+            }}
+          >
+            <div className="d-flex align-items-center">
+              <FaCheckCircle size={24} className="me-3" />
+              <CToastBody className="fw-semibold flex-grow-1">{toastMessage}</CToastBody>
+              <CToastClose className="ms-3 m-auto" style={{ color: '#fff', opacity: 0.8 }} />
+            </div>
+          </CToast>
+        )}
+      </CToaster>
+
+      <CCard className="mb-4 p-3">
+        <CRow className="justify-content-center">
+          <CCol xs={12} sm={4} lg={4} xxl={4} className="mb-4">
+            <CWidgetStatsC
+              icon={<CIcon icon={cilCalendar} height={36} />}
+              value={summary?.totalCompletedBookings?.toString() || '0'}
+              title={`Completed Bookings`}
+              progress={{ color: 'success', value: 75 }}
+            />
+          </CCol>
+          <CCol xs={12} sm={4} lg={4} xxl={4} className="mb-4">
+            <CWidgetStatsC
+              icon={<CIcon icon={cilCalendar} height={36} />}
+              value={summary?.totalCancelledBookings?.toString() || '0'}
+              title={`Cancelled Bookings`}
+              progress={{ color: 'warning', value: 75 }}
+            />
+          </CCol>
+          <CCol xs={12} sm={4} lg={4} xxl={4} className="mb-4">
+            <CWidgetStatsC
+              icon={<CIcon icon={cilCalendar} height={36} />}
+              value={summary?.totalUpcomingBookings?.toString() || '0'}
+              title={`Upcoming Bookings`}
+              progress={{ color: 'warning', value: 75 }}
+            />
+          </CCol>
+        </CRow>
+      </CCard>
+      <CCardBody>
+        <CRow className="align-items-center mb-3">
+          <CCol xs={12} md={4} className="mb-2 d-flex align-items-center justify-content-start">
+            <div
+              className="fw-bold"
+              style={{
+                fontSize: '1.5rem',
+                color: 'var(--cui-body-color, #212529)',
+                background: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                boxShadow: 'none',
+                letterSpacing: '0.5px',
+                transition: 'color 0.2s',
+              }}
+            >
+              Booking &amp; Appointments
+            </div>
+          </CCol>
+          <CCol xs={12} md={4} className="mb-2">
+            {/* <div className="position-relative" style={{ maxWidth: '600px' }}>
+              <CIcon
+                icon={cilSearch}
+                className="position-absolute"
+                style={{ top: '17px', left: '15px', zIndex: 10 }}
+              />
+              <CFormInput
+                type="text"
+                placeholder="Search by city..."
+                value={citySearchTerm}
+                onChange={handleCitySearchChange}
+                className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+              />
+            </div> */}
+          </CCol>
+          <CCol xs={12} md={4} className="mb-2">
+            <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
+              <CIcon
+                icon={cilSearch}
+                className="position-absolute"
+                style={{ top: '17px', left: '15px', zIndex: 10 }}
+              />
+              <CFormInput
+                type="text"
+                placeholder="Search by name, phone or email..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+              />
+            </div>
+          </CCol>
+        </CRow>
+      </CCardBody>
+
+      <CCard className="mb-4">
+        <CNav variant="tabs" className="mb-4">
+          {tabs.map((tab, idx) => (
+            <CNavItem key={idx}>
+              <CNavLink active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
+                {tab.label}
+              </CNavLink>
+            </CNavItem>
+          ))}
         </CNav>
 
-        {/* Add new Lawyer button and search input side by side */}
-      </div>
-
-      <CTabContent>
-        <CTabPane visible={true}>
-          <CCard className="mb-4">
-            {isLoading ? (
-              <div
-                className="d-flex justify-content-center align-items-center"
-                style={{ height: '60vh' }}
-              >
-                <CSpinner
-                  color="warning"
-                  style={{ width: '4rem', height: '4rem' }}
-                  variant="grow"
-                />
-              </div>
+        <CTable align="middle" className="mb-0 border" hover responsive>
+          <CTableHead className="text-nowrap">
+            <CTableRow>
+              <CTableHeaderCell className="text-center">ID</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Lawyer</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">User</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Booking Schedule</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Booking Location</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Payment Status</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Price</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Action</CTableHeaderCell>
+            </CTableRow>
+          </CTableHead>
+          <CTableBody>
+            {isFetching ? (
+              <CTableRow>
+                <CTableDataCell colSpan={8} className="text-center py-4">
+                  <CSpinner
+                    color="warning"
+                    style={{ width: '3rem', height: '3rem' }}
+                    variant="grow"
+                  />
+                </CTableDataCell>
+              </CTableRow>
+            ) : bookings.length > 0 ? (
+              bookings.map((booking) => (
+                <CTableRow
+                  key={booking._id}
+                  onClick={() =>
+                    navigate(`/bookings/detail/${booking._id}`, { state: { booking } })
+                  }
+                  style={{ cursor: 'pointer' }}
+                >
+                  <CTableDataCell className="text-center">
+                    {booking?._id?.slice(-5)?.toUpperCase()}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <div className="d-flex align-items-center justify-content-center">
+                      <CAvatar size="md" src={booking?.lawyer?.image} />
+                      <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
+                        {booking?.lawyer?.name}
+                      </div>
+                    </div>
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <div className="d-flex align-items-center justify-content-center">
+                      <CAvatar size="md" src={booking?.user?.image} />
+                      <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
+                        {booking?.user?.name}
+                      </div>
+                    </div>
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    {booking?.date
+                      ? new Date(booking.date).toLocaleDateString() + ' ' + (booking?.slot || '')
+                      : ''}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">{booking?.location}</CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <CBadge
+                      color={
+                        booking?.payments?.status === 'paid'
+                          ? 'success'
+                          : booking?.payments?.status === 'unpaid'
+                            ? 'warning'
+                            : 'secondary'
+                      }
+                    >
+                      {booking?.payments?.status}
+                    </CBadge>
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    {booking?.payments?.payable_amount
+                      ? `Rs. ${booking.payments.payable_amount}`
+                      : '-'}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <CDropdown alignment="end">
+                      <span style={{ fontSize: '24px', cursor: 'pointer' }}>⋮</span>
+                    </CDropdown>
+                  </CTableDataCell>
+                </CTableRow>
+              ))
             ) : (
-              <>
-                <CTable align="middle" className="mb-0 border" hover responsive>
-                  <CTableHead className="text-nowrap">
-                    <CTableRow>
-                      <CTableHeaderCell className="text-center">ID</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Lawyer</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">User</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Booking Schedule</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Booking Location</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Payment Status</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Price</CTableHeaderCell>
-                      <CTableHeaderCell className="text-center">Action</CTableHeaderCell>
-                    </CTableRow>
-                  </CTableHead>
-                  {/* <CTableBody>
-                    {tableData.length > 0
-                      ? tableData.map((item, index) => (
-                          <CTableRow key={index}>
-                            <CTableDataCell className="text-center">{index + 1}</CTableDataCell>
-                            <CTableDataCell className="text-center">
-                              <div className="d-flex align-items-center justify-content-center">
-                                <CAvatar size="md" src={item.image || ''} />
-                                <div className="ms-2 text-start">{item.name || item.full_name}</div>
-                              </div>
-                            </CTableDataCell>
-                            <CTableDataCell className="text-center">{item.user_name}</CTableDataCell>
-                            <CTableDataCell className="text-center">{item.booking_schedule}</CTableDataCell>
-                            <CTableDataCell className="text-center">{item.booking_type}</CTableDataCell>
-                            <CTableDataCell className="text-center">
-                              <CBadge
-                                color={
-                                  item.verification_status === 'Verified'
-                                    ? 'success'
-                                    : item.verification_status === 'Pending'
-                                      ? 'warning'
-                                      : 'danger'
-                                }
-                              >
-                                {item.verification_status}
-                              </CBadge>
-                            </CTableDataCell>
-                            <CTableDataCell className="text-center">
-                              <div
-                                onClick={() => navigate(`${path}/${item.lawyer_id}`)}
-                                style={{ cursor: 'pointer' }}
-                              >
-                                <FaEye className="me-2" />
-                              </div>
-                            </CTableDataCell>
-                          </CTableRow>
-                        ))
-                      : renderNoData()}
-                    </CTableBody> */}
-                </CTable>
-
-                {tableData.length > 0 && (
-                  <CPagination align="end" className="mt-3 me-3">
-                    <CPaginationItem
-                      aria-label="Previous"
-                      disabled={queryParams.page === 1}
-                      onClick={() => setQueryParams((prev) => ({ ...prev, page: prev.page - 1 }))}
-                    >
-                      <span aria-hidden="true">&laquo;</span>
-                    </CPaginationItem>
-
-                    {Array.from({ length: totalPages }).map((_, i) => (
-                      <CPaginationItem
-                        key={i}
-                        active={queryParams.page === i + 1}
-                        onClick={() => setQueryParams((prev) => ({ ...prev, page: i + 1 }))}
-                      >
-                        {i + 1}
-                      </CPaginationItem>
-                    ))}
-
-                    <CPaginationItem
-                      aria-label="Next"
-                      disabled={queryParams.page === totalPages}
-                      onClick={() => setQueryParams((prev) => ({ ...prev, page: prev.page + 1 }))}
-                    >
-                      <span aria-hidden="true">&raquo;</span>
-                    </CPaginationItem>
-                  </CPagination>
-                )}
-              </>
+              !isFetching && (
+                <CTableRow>
+                  <CTableDataCell colSpan={8} className="text-center py-4">
+                    {debouncedSearchTerm ? 'No matching bookings found.' : 'No bookings found.'}
+                  </CTableDataCell>
+                </CTableRow>
+              )
             )}
-          </CCard>
-        </CTabPane>
-      </CTabContent>
+          </CTableBody>
+        </CTable>
+
+        {/* Pagination: Only show if there are bookings and more than 1 page */}
+        {bookings.length > 0 && totalPages > 1 && (
+          <div className="d-flex justify-content-end mt-3 me-3">
+            <CPagination>
+              <CPaginationItem
+                aria-label="Previous"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
+                &laquo;
+              </CPaginationItem>
+              {renderPaginationItems()}
+              <CPaginationItem
+                aria-label="Next"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
+                &raquo;
+              </CPaginationItem>
+            </CPagination>
+          </div>
+        )}
+      </CCard>
     </>
   )
 }
 
-export default Tabs
+export default Bookings
