@@ -112,14 +112,14 @@ export const api = createApi({
       }),
     }),
     getPendingSubmissions: builder.query({
-      query: ({ page = 1, limit = 10, search = null }) => ({
-        url: `/admin/lawyers/pending-submissions?page=${page}&limit=${limit}&search=${search}`,
+      query: ({ page = 1, limit = 10, search = null, city = null }) => ({
+        url: `/admin/lawyers/pending-submissions?page=${page}&limit=${limit}&search=${search}&city=${city}`,
         method: 'GET',
       }),
     }),
     getVerification: builder.query({
-      query: ({ page = 1, limit = 10, status = 'Pending ', search = null }) => ({
-        url: `/admin/lawyers/verification-profiles?verification_status=${status}&page=${page}&limit=${limit}&search=${search}`,
+      query: ({ page = 1, limit = 10, status = 'Pending ', search = null, city = null }) => ({
+        url: `/admin/lawyers/verification-profiles?verification_status=${status}&page=${page}&limit=${limit}&search=${search}&city=${city}`,
         method: 'GET',
       }),
     }),
@@ -150,8 +150,8 @@ export const api = createApi({
       }),
     }),
     getFlaggedLawyers: builder.query({
-      query: ({ page = 1, limit = 10, search = null }) => ({
-        url: `/admin/lawyers/flagged-lawyers?page=${page}&limit=${limit}&search=${search}`,
+      query: ({ page = 1, limit = 10, search = null, city = null }) => ({
+        url: `/admin/lawyers/flagged-lawyers?page=${page}&limit=${limit}&search=${search}&city=${city}`,
         method: 'GET',
       }),
     }),
