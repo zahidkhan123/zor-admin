@@ -298,22 +298,16 @@ const ProfileSetup = () => {
       </CCard>
 
       <CCardBody>
-        <CRow className="align-items-center mb-3">
-          <CCol xs={12} md={4} className="mb-2">
-            {/* <CButton
-              color="warning"
-              onClick={() => navigate('/lawyers/add', { state: { mode: 'add' } })}
-            >
-              <CIcon icon={cilPlus} className="me-2" />
-              Add New Lawyer
-            </CButton> */}
-          </CCol>
-          <CCol xs={12} md={4} className="mb-2">
-            <div className="position-relative" style={{ maxWidth: '600px' }}>
+        <CRow className="align-items-center justify-content-end mb-3" style={{ marginRight: 0 }}>
+          {/* City Search */}
+          <CCol xs="auto" className="p-0 me-2">
+            {' '}
+            {/* 🔹 Added small right margin */}
+            <div className="position-relative">
               <CIcon
                 icon={cilSearch}
                 className="position-absolute"
-                style={{ top: '17px', left: '15px', zIndex: 10 }}
+                style={{ top: '14px', left: '12px', zIndex: 10 }}
               />
               <CFormInput
                 type="text"
@@ -321,16 +315,23 @@ const ProfileSetup = () => {
                 value={citySearchTerm}
                 onChange={handleCitySearchChange}
                 className="ps-5"
-                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+                style={{
+                  width: '250px', // Reduced width
+                  fontSize: '1rem',
+                  height: '44px',
+                  borderRadius: '6px',
+                }}
               />
             </div>
           </CCol>
-          <CCol xs={12} md={4} className="mb-2">
-            <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
+
+          {/* Name / Phone / Email Search */}
+          <CCol xs="auto" className="p-0">
+            <div className="position-relative">
               <CIcon
                 icon={cilSearch}
                 className="position-absolute"
-                style={{ top: '17px', left: '15px', zIndex: 10 }}
+                style={{ top: '14px', left: '12px', zIndex: 10 }}
               />
               <CFormInput
                 type="text"
@@ -338,7 +339,12 @@ const ProfileSetup = () => {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="ps-5"
-                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+                style={{
+                  width: '280px', // Slightly wider for longer text
+                  fontSize: '1rem',
+                  height: '44px',
+                  borderRadius: '6px',
+                }}
               />
             </div>
           </CCol>

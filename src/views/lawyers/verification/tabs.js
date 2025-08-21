@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   CCard,
   CCardBody,
@@ -31,6 +31,20 @@ import {
   useGetFlaggedLawyersQuery,
 } from '../../../services/api'
 
+// Custom hook for debouncing a value
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+  return debouncedValue
+}
+
 const Tabs = ({ path }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -41,9 +55,15 @@ const Tabs = ({ path }) => {
     page: fromPage || 1,
     limit: 10,
     search: '',
+    city: '',
   })
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
+  const [citySearchTerm, setCitySearchTerm] = useState('')
+
+  // Debounced values for searchTerm and citySearchTerm
+  const debouncedSearchTerm = useDebounce(searchTerm, 400)
+  const debouncedCitySearchTerm = useDebounce(citySearchTerm, 400)
 
   useEffect(() => {
     if (fromTab) setActiveKey(fromTab)
@@ -54,16 +74,20 @@ const Tabs = ({ path }) => {
     setSearchTerm(e.target.value)
   }
 
+  const handleCitySearchChange = (e) => {
+    setCitySearchTerm(e.target.value)
+  }
+
+  // Update queryParams when debounced search values change
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setQueryParams((prev) => ({
-        ...prev,
-        search: searchTerm.trim(),
-        page: 1,
-      }))
-    }, 400)
-    return () => clearTimeout(handler)
-  }, [searchTerm])
+    setQueryParams((prev) => ({
+      ...prev,
+      search: debouncedSearchTerm.trim(),
+      city: debouncedCitySearchTerm.trim(),
+      page: 1,
+    }))
+    // eslint-disable-next-line
+  }, [debouncedSearchTerm, debouncedCitySearchTerm])
 
   const {
     data: pendingData,
@@ -112,6 +136,7 @@ const Tabs = ({ path }) => {
     isLoading: loadingSpamVerification,
     refetch: refetchSpamVerification,
   } = useGetFlaggedLawyersQuery({ ...queryParams, refreshTrigger }, { skip: activeKey !== 6 })
+
   useEffect(() => {
     const { refresh, fromTab } = location.state || {}
     if (refresh) {
@@ -326,33 +351,50 @@ const Tabs = ({ path }) => {
             </CNavItem>
           ))}
         </CNav>
+        <div className="d-flex align-items-center">
+          {/* City Search */}
+          <div className="position-relative me-2" style={{ width: '250px' }}>
+            <CIcon
+              icon={cilSearch}
+              className="position-absolute"
+              style={{ top: '14px', left: '12px', zIndex: 10 }}
+            />
+            <CFormInput
+              type="text"
+              placeholder="Search by city..."
+              value={citySearchTerm}
+              onChange={handleCitySearchChange}
+              className="ps-5"
+              style={{
+                fontSize: '1rem',
+                height: '44px',
+                borderRadius: '6px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+              }}
+            />
+          </div>
 
-        <div
-          className="position-relative"
-          style={{
-            width: '100%',
-            maxWidth: '350px',
-            marginLeft: 'auto',
-          }}
-        >
-          <CIcon
-            icon={cilSearch}
-            className="position-absolute"
-            style={{ top: '14px', left: '15px', zIndex: 10 }}
-          />
-          <CFormInput
-            type="text"
-            placeholder="Search by name, phone or email..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="ps-5"
-            style={{
-              fontSize: '1rem',
-              height: '44px',
-              borderRadius: '6px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-            }}
-          />
+          {/* Name / Phone / Email Search */}
+          <div className="position-relative" style={{ width: '280px' }}>
+            <CIcon
+              icon={cilSearch}
+              className="position-absolute"
+              style={{ top: '14px', left: '12px', zIndex: 10 }}
+            />
+            <CFormInput
+              type="text"
+              placeholder="Search by name, phone or email..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="ps-5"
+              style={{
+                fontSize: '1rem',
+                height: '44px',
+                borderRadius: '6px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -374,7 +416,28 @@ const Tabs = ({ path }) => {
               <CTableBody>
                 {tableData.length > 0
                   ? tableData.map((item, index) => (
-                      <CTableRow key={index}>
+                      <CTableRow
+                        key={index}
+                        onClick={() =>
+                          activeKey === 1
+                            ? navigate(`/registration/view/${item._id}`, {
+                                state: {
+                                  lawyer: item,
+                                  fromTab: activeKey,
+                                  fromPage: queryParams.page,
+                                  searchTerm: searchTerm,
+                                  from: 'verification',
+                                },
+                              })
+                            : navigate(`${path}/${item.lawyer_id}`, {
+                                state: {
+                                  fromTab: activeKey,
+                                  fromPage: queryParams.page,
+                                  searchTerm: searchTerm,
+                                },
+                              })
+                        }
+                      >
                         <CTableDataCell className="text-center">{index + 1}</CTableDataCell>
                         <CTableDataCell className="text-center">
                           <div className="d-flex align-items-center justify-content-center">
@@ -407,25 +470,25 @@ const Tabs = ({ path }) => {
                         </CTableDataCell>
                         <CTableDataCell className="text-center">
                           <div
-                            onClick={() =>
-                              activeKey === 1
-                                ? navigate(`/registration/view/${item._id}`, {
-                                    state: {
-                                      lawyer: item,
-                                      fromTab: activeKey,
-                                      fromPage: queryParams.page,
-                                      searchTerm: searchTerm,
-                                      from: 'verification',
-                                    },
-                                  })
-                                : navigate(`${path}/${item.lawyer_id}`, {
-                                    state: {
-                                      fromTab: activeKey,
-                                      fromPage: queryParams.page,
-                                      searchTerm: searchTerm,
-                                    },
-                                  })
-                            }
+                          // onClick={() =>
+                          //   activeKey === 1
+                          //     ? navigate(`/registration/view/${item._id}`, {
+                          //         state: {
+                          //           lawyer: item,
+                          //           fromTab: activeKey,
+                          //           fromPage: queryParams.page,
+                          //           searchTerm: searchTerm,
+                          //           from: 'verification',
+                          //         },
+                          //       })
+                          //     : navigate(`${path}/${item.lawyer_id}`, {
+                          //         state: {
+                          //           fromTab: activeKey,
+                          //           fromPage: queryParams.page,
+                          //           searchTerm: searchTerm,
+                          //         },
+                          //       })
+                          // }
                           >
                             <FaEye className="me-2" />
                           </div>

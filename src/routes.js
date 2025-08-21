@@ -46,7 +46,7 @@ const Profile = React.lazy(() => import('./views/lawyers/profile/Profile'))
 const ProfileDetail = React.lazy(() => import('./views/lawyers/profile/ViewProfile'))
 const ProfileEdit = React.lazy(() => import('./views/lawyers/profile/EditProfile'))
 const SetAvailability = React.lazy(() => import('./views/lawyers/profile/SetAvailability'))
-
+const ViewAvailability = React.lazy(() => import('./views/lawyers/profile/viewAvailabiity'))
 {
   /*Bookings routes */
 }
@@ -82,7 +82,7 @@ const routes = [
   { path: '/profile/edit/:id', name: 'Profile Edit', element: ProfileEdit },
   { path: '/profile/add', name: 'Profile Add', element: ProfileEdit },
   { path: '/profile/set-availability', name: 'Set Availability', element: SetAvailability },
-
+  { path: '/profile/view-availability', name: 'View Availability', element: ViewAvailability },
   { path: '/bookings', name: 'Bookings', element: Bookings },
   { path: '/bookings/detail/:id', name: 'Booking Detail', element: BookingDetail },
 ]

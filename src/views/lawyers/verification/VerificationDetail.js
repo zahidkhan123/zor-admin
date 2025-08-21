@@ -468,6 +468,18 @@ const LawyerVerification = () => {
               onChange={handleNoteChange}
             />
           </div>
+
+          {lawyer?.verification_status === 'Rejected' && (
+            <div className="mt-4">
+              <h6>Rejection Reason</h6>
+              <CFormTextarea
+                rows={3}
+                value={lawyer?.rejection_reason}
+                placeholder="Rejection Reason"
+                disabled
+              />
+            </div>
+          )}
           <div className="d-flex justify-content-between mt-4">
             <div>
               <CButton color="secondary" onClick={handleBack}>

@@ -42,6 +42,7 @@ const Profile = React.lazy(() => import('./views/lawyers/profile/Profile'))
 const ProfileDetail = React.lazy(() => import('./views/lawyers/profile/ViewProfile'))
 const ProfileEdit = React.lazy(() => import('./views/lawyers/profile/EditProfile'))
 const SetAvailability = React.lazy(() => import('./views/lawyers/profile/SetAvailability'))
+const ViewAvailability = React.lazy(() => import('./views/lawyers/profile/viewAvailabiity'))
 {
   /*Lawyer routes */
 }
@@ -121,6 +122,7 @@ const App = () => {
             <Route path="profile/edit/:id" element={<ProfileEdit />} />
             <Route path="profile/add" element={<ProfileEdit />} />
             <Route path="profile/set-availability" element={<SetAvailability />} />
+            <Route path="profile/view-availability" element={<ViewAvailability />} />
             {/* Lawyer routes */}
             <Route path="lawyers" element={<AllLawyer />} />
             <Route path="lawyers/add" element={<LawyerProfileForm />} />
