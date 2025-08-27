@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import {
   CCard,
-  CCardBody,
   CNav,
   CNavItem,
   CNavLink,
@@ -19,7 +18,6 @@ import {
   CBadge,
   CSpinner,
   CFormInput,
-  CButton,
 } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { FaEye } from 'react-icons/fa'
@@ -61,6 +59,11 @@ const Tabs = ({ path }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [citySearchTerm, setCitySearchTerm] = useState('')
 
+  // Loader for search
+  const [searching, setSearching] = useState(false)
+  // Track last search/city to avoid unnecessary loader
+  const lastSearch = useRef({ search: '', city: '' })
+
   // Debounced values for searchTerm and citySearchTerm
   const debouncedSearchTerm = useDebounce(searchTerm, 400)
   const debouncedCitySearchTerm = useDebounce(citySearchTerm, 400)
@@ -79,13 +82,25 @@ const Tabs = ({ path }) => {
   }
 
   // Update queryParams when debounced search values change
+  // Show loader when searching
   useEffect(() => {
-    setQueryParams((prev) => ({
-      ...prev,
-      search: debouncedSearchTerm.trim(),
-      city: debouncedCitySearchTerm.trim(),
-      page: 1,
-    }))
+    // Only set searching loader if search/city actually changed
+    if (
+      debouncedSearchTerm.trim() !== lastSearch.current.search ||
+      debouncedCitySearchTerm.trim() !== lastSearch.current.city
+    ) {
+      setSearching(true)
+      setQueryParams((prev) => ({
+        ...prev,
+        search: debouncedSearchTerm.trim(),
+        city: debouncedCitySearchTerm.trim(),
+        page: 1, // Always reset to first page when search/city changes
+      }))
+      lastSearch.current = {
+        search: debouncedSearchTerm.trim(),
+        city: debouncedCitySearchTerm.trim(),
+      }
+    }
     // eslint-disable-next-line
   }, [debouncedSearchTerm, debouncedCitySearchTerm])
 
@@ -155,13 +170,43 @@ const Tabs = ({ path }) => {
     }
   }, [location.state, navigate, location.pathname])
 
+  // When data for the current tab is loaded, stop searching loader
+  useEffect(() => {
+    // Only stop searching if not loading and search/city in queryParams matches lastSearch
+    const isAnyLoading =
+      loadingPending ||
+      loadingVerification ||
+      loadingRejected ||
+      loadingVerifiedVerification ||
+      loadingOldVerification ||
+      loadingSpamVerification
+
+    if (
+      !isAnyLoading &&
+      queryParams.search === lastSearch.current.search &&
+      queryParams.city === lastSearch.current.city
+    ) {
+      setSearching(false)
+    }
+  }, [
+    loadingPending,
+    loadingVerification,
+    loadingRejected,
+    loadingVerifiedVerification,
+    loadingOldVerification,
+    loadingSpamVerification,
+    queryParams.search,
+    queryParams.city,
+  ])
+
   const isLoading =
     (activeKey === 1 && loadingPending) ||
     (activeKey === 2 && loadingVerification) ||
     (activeKey === 3 && loadingRejected) ||
     (activeKey === 4 && loadingVerifiedVerification) ||
     (activeKey === 5 && loadingOldVerification) ||
-    (activeKey === 6 && loadingSpamVerification)
+    (activeKey === 6 && loadingSpamVerification) ||
+    searching // Show loader when searching
 
   const tableData =
     activeKey === 1
@@ -176,10 +221,19 @@ const Tabs = ({ path }) => {
               ? oldVerification?.data?.results || []
               : spamVerification?.data?.results || []
 
+  // Reset page to 1 when activeKey changes (tab changes)
   useEffect(() => {
     setQueryParams((prev) => ({ ...prev, page: 1 }))
   }, [activeKey])
 
+  console.log('pendingData?.data?.totalPages', pendingData?.data?.totalPages)
+  console.log('pendingVerification?.data?.totalPages', pendingVerification?.data?.totalPages)
+  console.log('rejectedVerification?.data?.totalPages', rejectedVerification?.data?.totalPages)
+  console.log('verifiedVerification?.data?.totalPages', verifiedVerification?.data?.totalPages)
+  console.log('oldVerification?.data?.totalPages', oldVerification?.data?.totalPages)
+  console.log('spamVerification?.data?.totalPages', spamVerification?.data?.totalPages)
+
+  // getTotalPages should always use the latest data for the current tab
   const getTotalPages = () => {
     switch (activeKey) {
       case 1:
@@ -198,6 +252,16 @@ const Tabs = ({ path }) => {
         return 0
     }
   }
+
+  // When search/city changes, page is reset to 1, so pagination always starts at 1
+  // Fix: If current page > totalPages (e.g. after search), reset to last page
+  useEffect(() => {
+    const totalPages = getTotalPages()
+    if (queryParams.page > totalPages && totalPages > 0) {
+      setQueryParams((prev) => ({ ...prev, page: totalPages }))
+    }
+    // eslint-disable-next-line
+  }, [tableData, activeKey])
 
   const renderPaginationItems = () => {
     const totalPages = getTotalPages()
@@ -372,6 +436,20 @@ const Tabs = ({ path }) => {
                 boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
               }}
             />
+            {searching && (
+              <CSpinner
+                color="warning"
+                size="sm"
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '14px',
+                  zIndex: 11,
+                  width: '1.2rem',
+                  height: '1.2rem',
+                }}
+              />
+            )}
           </div>
 
           {/* Name / Phone / Email Search */}
@@ -394,6 +472,20 @@ const Tabs = ({ path }) => {
                 boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
               }}
             />
+            {searching && (
+              <CSpinner
+                color="warning"
+                size="sm"
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '14px',
+                  zIndex: 11,
+                  width: '1.2rem',
+                  height: '1.2rem',
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -408,6 +500,7 @@ const Tabs = ({ path }) => {
                   <CTableHeaderCell className="text-center">Lawyer</CTableHeaderCell>
                   <CTableHeaderCell className="text-center">Phone</CTableHeaderCell>
                   <CTableHeaderCell className="text-center">Email</CTableHeaderCell>
+                  <CTableHeaderCell className="text-center">City</CTableHeaderCell>
                   <CTableHeaderCell className="text-center">Gender/Age</CTableHeaderCell>
                   <CTableHeaderCell className="text-center">Status</CTableHeaderCell>
                   <CTableHeaderCell className="text-center">Action</CTableHeaderCell>
@@ -438,28 +531,63 @@ const Tabs = ({ path }) => {
                               })
                         }
                       >
-                        <CTableDataCell className="text-center">{index + 1}</CTableDataCell>
-                        <CTableDataCell className="text-center">
+                        {/* ID */}
+                        <CTableDataCell
+                          className="text-center align-middle"
+                          style={{ verticalAlign: 'middle', padding: '12px 8px' }}
+                        >
+                          {index + 1}
+                        </CTableDataCell>
+                        {/* Lawyer */}
+                        <CTableDataCell
+                          className="text-center align-middle"
+                          style={{ verticalAlign: 'middle', padding: '12px 8px' }}
+                        >
                           <div className="d-flex align-items-center justify-content-center">
                             <CAvatar size="md" src={item.image || ''} />
                             <div className="ms-2 text-start">{item.name || item.full_name}</div>
                           </div>
                         </CTableDataCell>
-                        <CTableDataCell className="text-center">{item.phone}</CTableDataCell>
-                        <CTableDataCell className="text-center">{item.email}</CTableDataCell>
-                        <CTableDataCell className="text-center">
+                        {/* Phone */}
+                        <CTableDataCell
+                          className="text-center align-middle"
+                          style={{ verticalAlign: 'middle', padding: '12px 8px' }}
+                        >
+                          {item.phone}
+                        </CTableDataCell>
+                        {/* Email */}
+                        <CTableDataCell
+                          className="text-center align-middle"
+                          style={{ verticalAlign: 'middle', padding: '12px 8px' }}
+                        >
+                          {item.email}
+                        </CTableDataCell>
+                        {/* City */}
+                        <CTableDataCell
+                          className="text-center align-middle"
+                          style={{ verticalAlign: 'middle', padding: '12px 8px' }}
+                        >
+                          {activeKey === 1 ? item.lawyer.city : item.city}
+                        </CTableDataCell>
+                        {/* Gender/Age */}
+                        <CTableDataCell
+                          className="text-center align-middle"
+                          style={{ verticalAlign: 'middle', padding: '12px 8px' }}
+                        >
                           {item?.gender} / {item.age}
                         </CTableDataCell>
+                        {/* Status */}
+
                         <CTableDataCell className="text-center">
                           <CBadge
                             color={
-                              item.verification_status === 'Verified'
-                                ? 'success'
-                                : item.verification_status === 'Pending'
-                                  ? 'warning'
+                              item.verification_status === 'Pending'
+                                ? 'warning'
+                                : item.verification_status === 'Verified'
+                                  ? 'success'
                                   : item.verification_status === 'Rejected'
                                     ? 'danger'
-                                    : item.status === 'rejected'
+                                    : item.verification_status === 'Flagged'
                                       ? 'danger'
                                       : 'secondary'
                             }
@@ -468,28 +596,12 @@ const Tabs = ({ path }) => {
                               (item.status === 'rejected' ? 'Flagged' : 'Not Started')}
                           </CBadge>
                         </CTableDataCell>
-                        <CTableDataCell className="text-center">
-                          <div
-                          // onClick={() =>
-                          //   activeKey === 1
-                          //     ? navigate(`/registration/view/${item._id}`, {
-                          //         state: {
-                          //           lawyer: item,
-                          //           fromTab: activeKey,
-                          //           fromPage: queryParams.page,
-                          //           searchTerm: searchTerm,
-                          //           from: 'verification',
-                          //         },
-                          //       })
-                          //     : navigate(`${path}/${item.lawyer_id}`, {
-                          //         state: {
-                          //           fromTab: activeKey,
-                          //           fromPage: queryParams.page,
-                          //           searchTerm: searchTerm,
-                          //         },
-                          //       })
-                          // }
-                          >
+                        {/* Action */}
+                        <CTableDataCell
+                          className="text-center align-middle"
+                          style={{ verticalAlign: 'middle', padding: '12px 8px' }}
+                        >
+                          <div>
                             <FaEye className="me-2" />
                           </div>
                         </CTableDataCell>

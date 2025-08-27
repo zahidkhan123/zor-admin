@@ -1012,7 +1012,7 @@ const EditProfile = () => {
             <CButton
               color="success"
               className="me-2"
-              // onClick={() => navigate('/profile/view-availability', { state: { lawyerData } })}
+              onClick={() => navigate('/profile/view-availability', { state: { id } })}
             >
               View Availability
             </CButton>

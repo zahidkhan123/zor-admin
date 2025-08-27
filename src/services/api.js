@@ -237,6 +237,12 @@ export const api = createApi({
         body: { status: lawyer.status },
       }),
     }),
+    getLawyerAvailability: builder.query({
+      query: (id) => ({
+        url: `/admin/lawyers/${id}/availability`,
+        method: 'GET',
+      }),
+    }),
   }),
 })
 
@@ -269,4 +275,5 @@ export const {
   useGetLocationsQuery,
   useGetSlotsQuery,
   useUpdateLawyerStatusMutation,
+  useGetLawyerAvailabilityQuery,
 } = api

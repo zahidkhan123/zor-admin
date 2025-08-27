@@ -2,73 +2,134 @@ import React from 'react'
 import { CCard, CCardBody, CRow, CCol } from '@coreui/react'
 
 const DaySchedule = ({ day, locations }) => {
-  return (
-    <CCard className="mb-4 border-0 shadow-sm rounded-3" style={{ backgroundColor: 'transparent' }}>
-      <CCardBody>
-        {/* Day Header */}
-        <div
-          className="d-flex align-items-center justify-content-between mb-3"
-          style={{
-            borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-            paddingBottom: '6px',
-          }}
-        >
-          <h5
-            className="fw-bold mb-0"
+  // Filter out locations with no slots or empty slots array
+  const locationsWithSlots = locations.filter(
+    (location) => Array.isArray(location.slots) && location.slots.length > 0,
+  )
+
+  // Handle empty state: show a message if no slots are available for this day
+  if (locationsWithSlots.length === 0) {
+    return (
+      <CCard
+        className="mb-4 border-0"
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.95) 100%)',
+          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
+        <CCardBody>
+          <CCard
+            className="border-0 shadow-none"
             style={{
-              color: 'var(--cui-body-color)',
-              fontSize: '1rem',
+              backgroundColor: '#fff',
+              borderRadius: '10px',
+              padding: '16px',
+              border: '1px solid #f0f0f0',
             }}
           >
-            {day}
-          </h5>
-        </div>
+            <CCardBody className="p-0">
+              {/* Day Header */}
+              <h5
+                style={{
+                  fontWeight: '600',
+                  fontSize: '1.1rem',
+                  marginBottom: '16px',
+                  color: '#000',
+                }}
+              >
+                {day}
+              </h5>
+              <div className="text-muted" style={{ fontSize: '0.98rem', marginBottom: '10px' }}>
+                No slots available for this day.
+              </div>
+            </CCardBody>
+          </CCard>
+        </CCardBody>
+      </CCard>
+    )
+  }
 
-        {/* Locations & Slots */}
-        {locations.map((location, index) => (
-          <div key={index} className="mb-4">
-            {/* Location Title */}
-            <h6
-              className="fw-semibold mb-3"
+  return (
+    <CCard
+      className="mb-4 border-0"
+      style={{
+        background:
+          'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.95) 100%)',
+        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        backdropFilter: 'blur(10px)',
+      }}
+    >
+      <CCardBody>
+        <CCard
+          className="border-0 shadow-none"
+          style={{
+            backgroundColor: '#fff',
+            borderRadius: '10px',
+            padding: '16px',
+            border: '1px solid #f0f0f0',
+          }}
+        >
+          <CCardBody className="p-0">
+            {/* Day Header */}
+            <h5
               style={{
-                color: 'var(--cui-body-color)',
-                fontSize: '0.9rem',
-                letterSpacing: '0.2px',
+                fontWeight: '600',
+                fontSize: '1.1rem',
+                marginBottom: '16px',
+                color: '#000',
               }}
             >
-              {location.name}
-            </h6>
+              {day}
+            </h5>
 
-            {/* Time Slots */}
-            <CRow className="g-2">
-              {location.slots && location.slots.length > 0 ? (
-                location.slots.map((slot, idx) => (
-                  <CCol key={idx} xs="auto">
-                    <div
-                      className="slot-chip"
-                      style={{
-                        padding: '6px 14px',
-                        borderRadius: '8px',
-                        fontSize: '0.85rem',
-                        fontWeight: 500,
-                        cursor: 'default',
-                        background: 'transparent',
-                        color: '#6c757d', // Bootstrap gray-600
-                        border: '1px solid var(--cui-gray-300)',
-                        boxShadow: 'none',
-                        transition: 'none',
-                      }}
-                    >
-                      {slot}
-                    </div>
-                  </CCol>
-                ))
-              ) : (
-                <p className="text-muted ms-2">No slots available</p>
-              )}
-            </CRow>
-          </div>
-        ))}
+            {/* Locations with available slots only */}
+            {locationsWithSlots.map((location, index) => (
+              <div key={index} style={{ marginBottom: '20px' }}>
+                {/* Location Name */}
+                <h6
+                  style={{
+                    fontWeight: '500',
+                    fontSize: '0.95rem',
+                    marginBottom: '10px',
+                    color: '#000',
+                  }}
+                >
+                  {location.name}
+                </h6>
+
+                {/* Slots */}
+                <CRow className="g-2">
+                  {location.slots.map((slot, idx) => (
+                    <CCol key={idx} xs="auto" className="p-1">
+                      <div
+                        style={{
+                          padding: '6px 16px',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: '500',
+                          background:
+                            'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.95) 100%)',
+                          color: '#000',
+                          border: '1px solid #ddd',
+                          cursor: 'default',
+                          transition: 'all 0.2s ease-in-out',
+                        }}
+                      >
+                        {slot}
+                      </div>
+                    </CCol>
+                  ))}
+                </CRow>
+              </div>
+            ))}
+          </CCardBody>
+        </CCard>
       </CCardBody>
     </CCard>
   )

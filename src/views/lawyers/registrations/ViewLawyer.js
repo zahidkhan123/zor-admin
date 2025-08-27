@@ -251,7 +251,34 @@ const LawyerView = () => {
               </CRow>
             </div>
           )}
+          {lawyer_details?.status === 'rejected' && (
+            <div className="mt-4">
+              <h5 className="mb-3">Note</h5>
+              <CFormTextarea rows={2} value={lawyer_details?.note} placeholder="Note" disabled />
+            </div>
+          )}
 
+          <div className="row justify-content-center align-items-center mb-1 mt-3">
+            <div className="col-12 col-md-8 d-flex align-items-center justify-content-between">
+              <CFormTextarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Enter notes here..."
+                rows={2}
+                className="mb-0 me-3"
+                style={{ maxWidth: '100%' }}
+              />
+              <CButton
+                color="primary"
+                style={{ minWidth: '120px', height: '48px' }}
+                onClick={() => {
+                  alert('Button clicked! ')
+                }}
+              >
+                Submit
+              </CButton>
+            </div>
+          </div>
           <div className="mt-4">
             <h5 className="mb-3">Add Notes</h5>
             <CFormTextarea
