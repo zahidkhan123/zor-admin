@@ -638,20 +638,17 @@ const EditProfile = () => {
 
     setIsSavingProfile(true)
     setToastVisible(false)
+    debugger
 
-    // Build categories array as per requirements
-    // Only send {name} if not deleted, {name, isDeleted:true} if deleted
     const categoriesPayload =
       selectedCategories && selectedCategories.length > 0
-        ? selectedCategories.map((cat) => {
-            if (cat.isDeleted) {
-              return { name: cat.name, isDeleted: true }
-            } else {
-              return { name: cat.name }
-            }
-          })
+        ? selectedCategories.map((cat) => ({
+            name: cat.name,
+            _id: cat._id,
+            ...(cat.isDeleted ? { isDeleted: true } : {}),
+          }))
         : []
-
+    debugger
     // Optionally, include image_url if you have it (for now, using profileImage if available)
     // If you want to send the original image url from the user, you can use lawyerData?.data?.lawyer?.user?.image
     // For now, let's use profileImage if it's a string and not a data URL (i.e., not a new upload)
@@ -732,7 +729,7 @@ const EditProfile = () => {
       //   })),
       // }),
     }
-
+    debugger
     const payloadData = {
       lawyer_id: id,
       lawyer_data: payload,
