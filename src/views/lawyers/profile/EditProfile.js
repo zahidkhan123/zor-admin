@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   CContainer,
   CCard,
@@ -19,6 +19,7 @@ import {
   CToast,
   CToastHeader,
   CToastBody,
+  CSpinner,
 } from '@coreui/react'
 import { CFormLabel, CFormTextarea } from '@coreui/react'
 import { cilMap, cilPencil, cilPlus, cilX, cilUser } from '@coreui/icons'
@@ -29,58 +30,187 @@ import {
   useGetFeeandlocationQuery,
   useGetCitiesQuery,
   useUpdateFeeandlocationMutation,
+  useUpdateLawyerProfileMutation,
 } from '../../../services/api.js'
 import { useParams } from 'react-router-dom'
 import { fetchSignedUrl, fetchMultipleSignedUrls } from '../../../assets/utils/imageUtils'
 import { useNavigate } from 'react-router-dom'
 
-const ListSection = ({ title, placeholder, items, onAdd, onRemove }) => {
+// Algolia search import
+import { search } from '../../../algolia/search'
+
+// Generic ListSection for all list-based fields
+const ListSection = ({
+  title,
+  placeholder,
+  items,
+  onAdd,
+  onRemove,
+  onSearch,
+  filteredItems,
+  error,
+  customInputFields,
+  addButtonLabel,
+  renderItem,
+}) => {
   const [input, setInput] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+
+  // Debounce search
+  useEffect(() => {
+    if (onSearch && input.trim()) {
+      const handler = setTimeout(() => {
+        onSearch(input.trim())
+        setShowDropdown(true)
+      }, 400)
+      return () => clearTimeout(handler)
+    } else if (onSearch) {
+      setShowDropdown(false)
+    }
+  }, [input, onSearch])
+
+  // For custom input fields (like education/case)
+  const [customInputs, setCustomInputs] = useState({})
+
+  const handleCustomInputChange = (field, value) => {
+    setCustomInputs((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleCustomAdd = () => {
+    if (customInputFields && onAdd) {
+      onAdd(customInputs)
+      setCustomInputs({})
+    }
+  }
+
   return (
     <CCard className="mb-4 shadow-sm">
       <CCardHeader className="bg-warning text-white py-3">
-        <h5 className="mb-0 fw-semibold">{title}</h5>
+        <h5 className="mb-0 fw-semibold" style={{ color: '#000' }}>
+          {title}
+        </h5>
       </CCardHeader>
       <CCardBody className="p-4">
-        <div className="d-flex gap-2 mb-4">
-          <CFormInput
-            placeholder={placeholder}
-            className="flex-grow-1 border-2"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <CButton
-            color="warning"
-            size="sm"
-            className="d-flex align-items-center gap-1 px-4 py-2 fw-semibold"
-            onClick={() => {
-              if (input.trim()) {
-                onAdd(input.trim())
-                setInput('')
-              }
-            }}
-          >
-            <CIcon icon={cilPlus} className="fs-5" />
-            <span>Add</span>
-          </CButton>
-        </div>
+        {customInputFields ? (
+          <CRow className="mb-3 g-2">
+            {customInputFields.map((field) => (
+              <CCol key={field.name}>
+                <CFormInput
+                  placeholder={field.placeholder}
+                  value={customInputs[field.name] || ''}
+                  onChange={(e) => handleCustomInputChange(field.name, e.target.value)}
+                  className={error && !customInputs[field.name] ? 'border-danger' : ''}
+                  type={field.type || 'text'}
+                />
+              </CCol>
+            ))}
+            <CCol md="auto">
+              <CButton color="warning" onClick={handleCustomAdd}>
+                <CIcon icon={cilPlus} /> {addButtonLabel || 'Add'}
+              </CButton>
+            </CCol>
+          </CRow>
+        ) : (
+          <div className="d-flex gap-2 mb-4 position-relative">
+            <CFormInput
+              placeholder={placeholder}
+              className={`flex-grow-1 border-2${error ? ' border-danger' : ''}`}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              autoComplete="off"
+              style={{ color: '#000' }}
+              onFocus={() => {
+                if (onSearch && input.trim()) setShowDropdown(true)
+              }}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+            />
+            <CButton
+              color="warning"
+              size="sm"
+              className="d-flex align-items-center gap-1 px-4 py-2 fw-semibold"
+              onClick={() => {
+                if (input.trim()) {
+                  onAdd(input.trim())
+                  setInput('')
+                  setShowDropdown(false)
+                }
+              }}
+            >
+              <CIcon icon={cilPlus} className="fs-5" />
+              <span style={{ color: '#000' }}>Add</span>
+            </CButton>
+            {/* Dropdown for Algolia search results */}
+            {onSearch && showDropdown && filteredItems && filteredItems.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  zIndex: 10,
+                  background: '#fff',
+                  border: '1px solid #eee',
+                  borderRadius: 4,
+                  maxHeight: 200,
+                  overflowY: 'auto',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  color: '#000',
+                }}
+              >
+                {filteredItems.map((item, idx) => (
+                  <div
+                    key={item.name + idx}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      borderBottom: idx === filteredItems.length - 1 ? 'none' : '1px solid #ccc',
+                      color: '#000',
+                    }}
+                    onMouseDown={() => {
+                      onAdd(item.name)
+                      setInput('')
+                      setShowDropdown(false)
+                    }}
+                  >
+                    {item.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {error && (
+          <div className="text-danger mb-1" style={{ fontSize: 13 }}>
+            {error}
+          </div>
+        )}
         <div className="mb-3">
-          <h6 className="text-muted mb-3">Selected Items:</h6>
+          <h6 className="text-muted mb-3" style={{ color: '#000' }}>
+            Selected Items:
+          </h6>
           <div className="d-flex flex-wrap gap-2">
             {(items || [])
+              .map((item, idx) => ({ ...item, _actualIndex: idx }))
               .filter((item) => !item.isDeleted)
-              .map((item, index) => (
-                <CButton
-                  color="secondary"
-                  className="d-flex align-items-center px-3 py-2"
-                  shape="rounded-pill"
-                  key={index}
-                  onClick={() => onRemove(index)}
-                >
-                  <span className="me-1">{typeof item === 'object' ? item.name : item}</span>
-                  <CIcon icon={cilX} className="fs-6" />
-                </CButton>
-              ))}
+              .map((item) =>
+                renderItem ? (
+                  renderItem(item, () => onRemove(item._actualIndex))
+                ) : (
+                  <CButton
+                    color="secondary"
+                    className="d-flex align-items-center px-3 py-2"
+                    shape="rounded-pill"
+                    key={item._id || item._actualIndex}
+                    onClick={() => onRemove(item._actualIndex)}
+                    style={{ color: '#000' }}
+                  >
+                    <span className="me-1" style={{ color: '#000' }}>
+                      {typeof item === 'object' ? item.name : item}
+                    </span>
+                    <CIcon icon={cilX} className="fs-6" />
+                  </CButton>
+                ),
+              )}
           </div>
         </div>
       </CCardBody>
@@ -120,6 +250,7 @@ const EditProfile = () => {
   const { data: citiesData } = useGetCitiesQuery()
   const { data: feesandlocationData } = useGetFeeandlocationQuery(id, { skip: !id })
   const [updateFeeandlocation] = useUpdateFeeandlocationMutation()
+  const [updateLawyerProfile] = useUpdateLawyerProfileMutation()
   const [name, setName] = useState('')
   const [category, setCategory] = useState([])
   const [selectedCategories, setSelectedCategories] = useState([])
@@ -132,20 +263,22 @@ const EditProfile = () => {
   const [memberships, setMemberships] = useState([])
 
   const [educationList, setEducationList] = useState([])
-  const [degree, setDegree] = useState('')
-  const [year, setYear] = useState('')
-  const [university, setUniversity] = useState('')
-
-  const [caseTitle, setCaseTitle] = useState('')
-  const [caseYear, setCaseYear] = useState('')
-  const [court, setCourt] = useState('')
-  const [link, setLink] = useState('')
 
   const [profileImage, setProfileImage] = useState('')
   const [certificateList, setCertificateList] = useState([])
 
+  // Loader and toast state
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [toastColor, setToastColor] = useState('success')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isSavingLocations, setIsSavingLocations] = useState(false)
+
+  // Micro validation error states
+  const [categoryError, setCategoryError] = useState('')
+  const [specializationsError, setSpecializationsError] = useState('')
+  const [servicesError, setServicesError] = useState('')
+  const [educationError, setEducationError] = useState('')
 
   // For new API: locations is an array, not an object
   const [locations, setLocations] = useState([])
@@ -160,6 +293,43 @@ const EditProfile = () => {
     home: '',
     office: '',
   })
+
+  // Algolia filtered results for services and specializations
+  const [filteredSpecializations, setFilteredSpecializations] = useState([])
+  const [filteredServices, setFilteredServices] = useState([])
+
+  // Algolia filterResults function
+  const filterResults = useCallback(
+    async (text, title, setFiltered) => {
+      // selectedCategories is array of category objects
+      const selectedCategoryNames = selectedCategories
+        .filter((item) => !item.isDeleted)
+        ?.map((item) => item.name)
+      let collection = []
+      for (let catName of selectedCategoryNames) {
+        const categoryId = categoriesData?.data?.find((item) => item.name === catName)?._id
+        if (!text || !categoryId) {
+          setFiltered([])
+          continue
+        }
+        // Search in both specializations and services indexes
+        const [specializationsResults, servicesResults] = await Promise.all([
+          search(text, 'specializations', categoryId),
+          search(text, 'services', categoryId),
+        ])
+        // Merge and format results from both indexes
+        const mergedResults = [...(specializationsResults || []), ...(servicesResults || [])]
+        const internalCollection = mergedResults?.map((item) => {
+          return {
+            name: item.name,
+          }
+        })
+        collection = [...collection, ...internalCollection]
+      }
+      setFiltered(collection)
+    },
+    [selectedCategories, categoriesData],
+  )
 
   useEffect(() => {
     if (lawyerData?.data?.lawyer?.user?.image) {
@@ -313,8 +483,10 @@ const EditProfile = () => {
           city_id: selectedCity || '',
           address: '',
           directionNotes: '',
+          area: '', // Add area field for UI consistency
         }
       })
+
       setLocations(mappedLocations)
       // --- End: Always map all location types, even if empty ---
 
@@ -335,6 +507,7 @@ const EditProfile = () => {
         city_id: selectedCity || '',
         address: '',
         directionNotes: '',
+        area: '', // Add area field for UI consistency
       }))
       setLocations(mappedLocations)
     }
@@ -348,75 +521,80 @@ const EditProfile = () => {
     }
   }, [lawyerData])
 
+  // Micro validation for categories, services, specializations, education
+  // Run on every change
+  useEffect(() => {
+    // Categories: at least 2
+    if (selectedCategories.length < 2) {
+      setCategoryError('Please select at least two categories.')
+    } else {
+      setCategoryError('')
+    }
+  }, [selectedCategories])
+
+  useEffect(() => {
+    // Specializations: at least 1
+    if (specializations.filter((s) => !s.isDeleted).length === 0) {
+      setSpecializationsError('Please add at least one specialization.')
+    } else {
+      setSpecializationsError('')
+    }
+  }, [specializations])
+
+  useEffect(() => {
+    // Services: at least 1
+    if (services.filter((s) => !s.isDeleted).length === 0) {
+      setServicesError('Please add at least one service.')
+    } else {
+      setServicesError('')
+    }
+  }, [services])
+
+  useEffect(() => {
+    // Education: at least 1
+    if (educationList.filter((e) => !e.isDeleted).length === 0) {
+      setEducationError('Please add at least one education entry.')
+    } else {
+      setEducationError('')
+    }
+  }, [educationList])
+
+  // --- FIX: Remove by actual index, not filtered index ---
   const handleAdd = (setFunc, list) => (val) => {
-    if (val && val.trim()) {
-      const newItem = {
-        name: val.trim(),
-        isDeleted: false,
+    if (val && typeof val === 'object') {
+      // For custom input fields (education, cases)
+      setFunc([...list, { ...val, isDeleted: false }])
+    } else if (val && val.trim) {
+      setFunc([...list, { name: val.trim(), isDeleted: false }])
+    }
+  }
+
+  const handleRemove = (setFunc, list) => (actualIndex) => {
+    setFunc((prev) => {
+      const updated = [...prev]
+      if (updated[actualIndex]?._id) {
+        updated[actualIndex].isDeleted = true
+      } else {
+        updated.splice(actualIndex, 1)
       }
-      setFunc([...list, newItem])
-    }
+      return updated
+    })
   }
 
-  const handleRemove = (setFunc, list) => (index) => {
-    const updated = [...list]
-    if (updated[index]._id) {
-      updated[index].isDeleted = true
-    } else {
-      updated.splice(index, 1)
-    }
-    setFunc(updated)
+  // Certificates logic
+  const handleAddCertificate = (fileUrl) => {
+    setCertificateList((prev) => [...prev, { fileUrl, isDeleted: false }])
   }
-
-  const handleAddEducation = () => {
-    if (degree && year && university) {
-      const newEdu = {
-        name: `${degree}, ${university}`,
-        completionYear: parseInt(year) || 0,
-        isDeleted: false,
+  const handleRemoveCertificate = (actualIndex) => {
+    setCertificateList((prev) => {
+      const updated = [...prev]
+      if (updated[actualIndex]?._id) {
+        updated[actualIndex].isDeleted = true
+      } else {
+        updated.splice(actualIndex, 1)
       }
-      setEducationList([...educationList, newEdu])
-      setDegree('')
-      setYear('')
-      setUniversity('')
-    }
-  }
-
-  const handleRemoveEducation = (index) => {
-    const updated = [...educationList]
-    if (updated[index]._id) {
-      updated[index].isDeleted = true
-      setEducationList(updated)
-    } else {
-      updated.splice(index, 1)
-      setEducationList(updated)
-    }
-  }
-
-  const handleAddCase = () => {
-    if (caseTitle && caseYear && court && link) {
-      const newCase = {
-        caseTitle,
-        caseYear: Number(caseYear),
-        courtLicense: court,
-        caseLink: link,
-        isDeleted: false,
-      }
-      setCases([...cases, newCase])
-      setCaseTitle('')
-      setCaseYear('')
-      setCourt('')
-      setLink('')
-    }
-  }
-  const handleRemoveCase = (index) => {
-    const updated = [...cases]
-    if (updated[index]?._id) {
-      updated[index].isDeleted = true
-    } else {
-      updated.splice(index, 1)
-    }
-    setCases(updated)
+      return updated
+    })
   }
 
   // Location handlers for array of locations
@@ -436,7 +614,55 @@ const EditProfile = () => {
     }
   }
 
-  const handleSave = () => {
+  // --- REWRITE: Custom categories payload as per requirements ---
+  const handleSave = async () => {
+    // Micro validation before save
+    let hasError = false
+    if (selectedCategories.length < 2) {
+      setCategoryError('Please select at least two categories.')
+      hasError = true
+    }
+    if (specializations.filter((s) => !s.isDeleted).length === 0) {
+      setSpecializationsError('Please add at least one specialization.')
+      hasError = true
+    }
+    if (services.filter((s) => !s.isDeleted).length === 0) {
+      setServicesError('Please add at least one service.')
+      hasError = true
+    }
+    if (educationList.filter((e) => !e.isDeleted).length === 0) {
+      setEducationError('Please add at least one education entry.')
+      hasError = true
+    }
+    if (hasError) return
+
+    setIsSavingProfile(true)
+    setToastVisible(false)
+
+    // Build categories array as per requirements
+    // Only send {name} if not deleted, {name, isDeleted:true} if deleted
+    const categoriesPayload =
+      selectedCategories && selectedCategories.length > 0
+        ? selectedCategories.map((cat) => {
+            if (cat.isDeleted) {
+              return { name: cat.name, isDeleted: true }
+            } else {
+              return { name: cat.name }
+            }
+          })
+        : []
+
+    // Optionally, include image_url if you have it (for now, using profileImage if available)
+    // If you want to send the original image url from the user, you can use lawyerData?.data?.lawyer?.user?.image
+    // For now, let's use profileImage if it's a string and not a data URL (i.e., not a new upload)
+    let image_url = ''
+    if (
+      lawyerData?.data?.lawyer?.user?.image &&
+      typeof lawyerData.data.lawyer.user.image === 'string'
+    ) {
+      image_url = lawyerData.data.lawyer.user.image
+    }
+
     const payload = {
       ...(educationList.length > 0 && {
         education: educationList.map((edu) => ({
@@ -470,12 +696,12 @@ const EditProfile = () => {
           ...(m.isDeleted !== undefined && { isDeleted: m.isDeleted }),
         })),
       }),
-      ...(selectedCategories?.length > 0 && {
-        categories: selectedCategories.map((c) => ({
-          _id: c?._id || '',
-          name: c?.name || '',
-          ...(c?.isDeleted !== undefined && { isDeleted: c.isDeleted }),
-        })),
+      // --- Custom categories object as per requirements ---
+      ...(categoriesPayload.length > 0 && {
+        categories: {
+          ...(image_url && { image_url }),
+          categories: categoriesPayload,
+        },
       }),
       ...(languages.length > 0 && {
         languages: languages.map((l) => ({
@@ -498,36 +724,77 @@ const EditProfile = () => {
           ...(s.isDeleted !== undefined && { isDeleted: s.isDeleted }),
         })),
       }),
-      ...(certificateList.length > 0 && {
-        certificates: certificateList.map((fileUrl) => ({
-          ...(fileUrl._id && { _id: fileUrl._id }),
-          fileUrl,
-          ...(fileUrl.isDeleted !== undefined && { isDeleted: fileUrl.isDeleted }),
-        })),
-      }),
+      // ...(certificateList.length > 0 && {
+      //   certificates: certificateList.map((cert) => ({
+      //     ...(cert._id && { _id: cert._id }),
+      //     fileUrl: cert.fileUrl,
+      //     ...(cert.isDeleted !== undefined && { isDeleted: cert.isDeleted }),
+      //   })),
+      // }),
     }
 
-    handleSaveLocationsAndFees()
+    const payloadData = {
+      lawyer_id: id,
+      lawyer_data: payload,
+    }
+    try {
+      const res = await updateLawyerProfile(payloadData)
+      if (res?.data?.success) {
+        setToastMessage('Lawyer profile updated successfully!')
+        setToastColor('success')
+        setToastVisible(true)
+      } else {
+        setToastMessage(
+          res?.error?.data?.message || res?.data?.message || 'Failed to update lawyer profile',
+        )
+        setToastColor('danger')
+        setToastVisible(true)
+      }
+    } catch (err) {
+      setToastMessage('Failed to update lawyer profile')
+      setToastColor('danger')
+      setToastVisible(true)
+    } finally {
+      setIsSavingProfile(false)
+    }
   }
 
+  // --- REWRITE: Save Locations and Fees with area field and correct structure ---
   const handleSaveLocationsAndFees = async () => {
-    // Only include locations that have a city_id and are not online
+    setIsSavingLocations(true)
+    setToastVisible(false)
+    // Helper to get location_id by type
+    const getLocationIdByType = (type) => {
+      switch ((type || '').toLowerCase()) {
+        case 'home':
+          return '677d1ace0166c7338518f889'
+        case 'office':
+          return '677d1ad70166c7338518f88b'
+        case 'chamber':
+          return '677d1adf0166c7338518f88d'
+        default:
+          return type ? type.toLowerCase() : ''
+      }
+    }
 
-    const filteredLocations = locations.filter(
-      (loc) =>
-        loc.type &&
-        loc.type.toLowerCase() !== 'online' &&
-        loc.city_id &&
-        loc.address !== undefined &&
-        loc.directionNotes !== undefined,
-    )
-    const payload = {
-      lawyer_locations: filteredLocations.map((loc) => ({
-        location_id: loc.location_id,
-        city_id: loc.city_id,
+    const filteredLocations = locations
+      .filter(
+        (loc) =>
+          loc.type &&
+          loc.type.toLowerCase() !== 'online' &&
+          loc.address !== undefined &&
+          loc.directionNotes !== undefined,
+      )
+      .map((loc) => ({
+        location_id: getLocationIdByType(loc.type),
+        city_id: selectedCity,
+        area: loc.area || '', // area field, default to empty string if not present
         address: loc.address,
         directionNotes: loc.directionNotes,
-      })),
+      }))
+
+    const payload = {
+      lawyer_locations: filteredLocations,
       lawyer_fee: {
         online: fees.online ? parseInt(fees.online) : 0,
         chamber: fees.chamber ? parseInt(fees.chamber) : 0,
@@ -535,13 +802,25 @@ const EditProfile = () => {
         home: fees.home ? parseInt(fees.home) : 0,
       },
     }
-    const res = await updateFeeandlocation({ id, payload })
-    if (res?.data?.success) {
-      setToastMessage('Locations and fees updated successfully!')
-      setToastVisible(true)
-    } else {
+    try {
+      const res = await updateFeeandlocation({ id, payload })
+      if (res?.data?.success) {
+        setToastMessage('Locations and fees updated successfully!')
+        setToastColor('success')
+        setToastVisible(true)
+      } else {
+        setToastMessage(
+          res?.error?.data?.message || res?.data?.message || 'Failed to update locations and fees',
+        )
+        setToastColor('danger')
+        setToastVisible(true)
+      }
+    } catch (err) {
       setToastMessage('Failed to update locations and fees')
+      setToastColor('danger')
       setToastVisible(true)
+    } finally {
+      setIsSavingLocations(false)
     }
   }
 
@@ -563,11 +842,11 @@ const EditProfile = () => {
           <CToast
             autohide={true}
             visible={true}
-            color="success"
+            color={toastColor}
             onClose={() => setToastVisible(false)}
           >
             <CToastHeader closeButton>
-              <strong className="me-auto">Success</strong>
+              <strong className="me-auto">{toastColor === 'success' ? 'Success' : 'Error'}</strong>
             </CToastHeader>
             <CToastBody>{toastMessage}</CToastBody>
           </CToast>
@@ -638,38 +917,57 @@ const EditProfile = () => {
                   />
                 </CCol>
                 <CCol md={6}>
-                  <CDropdown className="mb-2">
-                    <CDropdownToggle color="secondary">
-                      {category.length > 0 ? `${category.length} selected` : 'Select Categories'}
-                    </CDropdownToggle>
-                    <CDropdownMenu style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                      {categoriesData?.data?.map((cat) => {
-                        const isSelected = category.includes(cat._id)
-                        return (
-                          <div key={cat._id} className="px-3 py-1">
-                            <CFormCheck
-                              id={`cat-${cat._id}`}
-                              label={cat.name}
-                              value={cat._id}
-                              checked={isSelected}
-                              disabled={isSelected} // Disable if already selected
-                              onChange={(e) => {
-                                const selectedId = e.target.value
-                                const selectedCat = categoriesData.data.find(
-                                  (c) => c._id === selectedId,
-                                )
+                  <div>
+                    <CDropdown className="mb-2">
+                      <CDropdownToggle
+                        color={categoryError ? 'danger' : 'secondary'}
+                        aria-label="Select Categories"
+                        style={categoryError ? { border: '1px solid #dc3545' } : {}}
+                      >
+                        {category.length > 0 ? `${category.length} selected` : 'Select Categories'}
+                      </CDropdownToggle>
+                      <CDropdownMenu style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                        {categoriesData?.data?.map((cat) => {
+                          const isSelected = category.includes(cat._id)
+                          const isMaxSelected = category.length >= 2 && !isSelected
+                          return (
+                            <div key={cat._id} className="px-3 py-1">
+                              <CFormCheck
+                                id={`cat-${cat._id}`}
+                                label={cat.name}
+                                value={cat._id}
+                                checked={isSelected}
+                                disabled={isMaxSelected}
+                                onChange={(e) => {
+                                  const selectedId = e.target.value
+                                  const selectedCat = categoriesData.data.find(
+                                    (c) => c._id === selectedId,
+                                  )
 
-                                if (e.target.checked && !isSelected) {
-                                  setCategory((prev) => [...prev, selectedId, ...category])
-                                  setSelectedCategories((prev) => [...prev, selectedCat])
-                                }
-                              }}
-                            />
-                          </div>
-                        )
-                      })}
-                    </CDropdownMenu>
-                  </CDropdown>
+                                  if (e.target.checked && !isSelected && category.length < 2) {
+                                    setCategory((prev) => [...prev, selectedId])
+                                    setSelectedCategories((prev) => [...prev, selectedCat])
+                                  } else if (!e.target.checked && isSelected) {
+                                    // Remove category
+                                    setCategory((prev) => prev.filter((id) => id !== selectedId))
+                                    setSelectedCategories((prev) =>
+                                      prev.filter((cat) => cat._id !== selectedId),
+                                    )
+                                  }
+                                }}
+                              />
+                            </div>
+                          )
+                        })}
+                      </CDropdownMenu>
+                    </CDropdown>
+                    {/* Error message if required */}
+                    {categoryError && (
+                      <div className="text-danger" style={{ fontSize: 13 }}>
+                        {categoryError}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Selected categories display */}
                   {selectedCategories.length > 0 && (
@@ -677,8 +975,25 @@ const EditProfile = () => {
                       <h6 className="text-muted mb-2">Selected Categories:</h6>
                       <div className="d-flex flex-wrap gap-2">
                         {selectedCategories.map((cat) => (
-                          <CBadge color="warning" className="px-3 py-2 rounded-pill" key={cat._id}>
+                          <CBadge
+                            color="warning"
+                            className="px-3 py-2 rounded-pill d-flex align-items-center"
+                            key={cat._id}
+                            style={{ cursor: 'pointer' }}
+                          >
                             {cat.name}
+                            <CIcon
+                              icon={cilX}
+                              className="ms-2"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                // Remove category when badge X is clicked
+                                setCategory((prev) => prev.filter((id) => id !== cat._id))
+                                setSelectedCategories((prev) =>
+                                  prev.filter((c) => c._id !== cat._id),
+                                )
+                              }}
+                            />
                           </CBadge>
                         ))}
                       </div>
@@ -695,6 +1010,9 @@ const EditProfile = () => {
             items={specializations}
             onAdd={handleAdd(setSpecializations, specializations)}
             onRemove={handleRemove(setSpecializations, specializations)}
+            onSearch={(text) => filterResults(text, 'specializations', setFilteredSpecializations)}
+            filteredItems={filteredSpecializations}
+            error={specializationsError}
           />
           <ListSection
             title="Services"
@@ -702,6 +1020,9 @@ const EditProfile = () => {
             items={services}
             onAdd={handleAdd(setServices, services)}
             onRemove={handleRemove(setServices, services)}
+            onSearch={(text) => filterResults(text, 'services', setFilteredServices)}
+            filteredItems={filteredServices}
+            error={servicesError}
           />
           <ListSection
             title="Experience"
@@ -726,156 +1047,119 @@ const EditProfile = () => {
           />
 
           {/* Education */}
-          <CCard className="mb-4">
-            <CCardHeader className="bg-warning text-white">
-              <h5 className="mb-0">Education</h5>
-            </CCardHeader>
-            <CCardBody>
-              <CRow className="mb-3 g-2">
-                <CCol>
-                  <CFormInput
-                    placeholder="Degree"
-                    value={degree}
-                    onChange={(e) => setDegree(e.target.value)}
-                  />
-                </CCol>
-                <CCol>
-                  <CFormInput
-                    placeholder="Year"
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                  />
-                </CCol>
-                <CCol>
-                  <CFormInput
-                    placeholder="University"
-                    value={university}
-                    onChange={(e) => setUniversity(e.target.value)}
-                  />
-                </CCol>
-                <CCol md="auto">
-                  <CButton color="warning" onClick={handleAddEducation}>
-                    <CIcon icon={cilPlus} /> Add
-                  </CButton>
-                </CCol>
-              </CRow>
-              <div className="d-flex flex-wrap">
-                {educationList
-                  .map((edu, actualIndex) => ({ ...edu, actualIndex }))
-                  .filter((edu) => !edu.isDeleted)
-                  .map((edu) => (
-                    <CButton
-                      color="secondary"
-                      className="me-2 mb-2"
-                      shape="rounded-pill"
-                      key={edu?._id || edu.actualIndex}
-                      onClick={() => handleRemoveEducation(edu.actualIndex)}
-                    >
-                      {edu.name} ({edu.completionYear})
-                      <CIcon icon={cilX} className="ms-1" />
-                    </CButton>
-                  ))}
-              </div>
-            </CCardBody>
-          </CCard>
+          <ListSection
+            title="Education"
+            items={educationList}
+            onAdd={(val) => {
+              // val: { degree, year, university }
+              if (val.degree && val.year && val.university) {
+                const newEdu = {
+                  name: `${val.degree}, ${val.university}`,
+                  completionYear: parseInt(val.year) || 0,
+                  isDeleted: false,
+                }
+                setEducationList((prev) => [...prev, newEdu])
+              }
+            }}
+            onRemove={handleRemove(setEducationList, educationList)}
+            customInputFields={[
+              { name: 'degree', placeholder: 'Degree' },
+              { name: 'year', placeholder: 'Year', type: 'number' },
+              { name: 'university', placeholder: 'University' },
+            ]}
+            addButtonLabel="Add"
+            error={educationError}
+            renderItem={(edu, onRemoveClick) => (
+              <CButton
+                color="secondary"
+                className="me-2 mb-2"
+                shape="rounded-pill"
+                key={edu._id || edu._actualIndex}
+                onClick={onRemoveClick}
+              >
+                {edu.name} ({edu.completionYear})
+                <CIcon icon={cilX} className="ms-1" />
+              </CButton>
+            )}
+          />
 
-          {/* Cases */}
-          <CCard className="mb-4">
-            <CCardHeader className="bg-warning text-white">
-              <h5 className="mb-0">Renowned Cases</h5>
-            </CCardHeader>
-            <CCardBody>
-              <CRow className="mb-3 g-2">
-                <CCol>
-                  <CFormInput
-                    placeholder="Case Title"
-                    value={caseTitle}
-                    onChange={(e) => setCaseTitle(e.target.value)}
-                  />
-                </CCol>
-                <CCol>
-                  <CFormInput
-                    placeholder="Year"
-                    value={caseYear}
-                    onChange={(e) => setCaseYear(e.target.value)}
-                  />
-                </CCol>
-                <CCol>
-                  <CFormInput
-                    placeholder="Court"
-                    value={court}
-                    onChange={(e) => setCourt(e.target.value)}
-                  />
-                </CCol>
-                <CCol>
-                  <CFormInput
-                    placeholder="Link"
-                    value={link}
-                    onChange={(e) => setLink(e.target.value)}
-                  />
-                </CCol>
-                <CCol md="auto">
-                  <CButton color="warning" onClick={handleAddCase}>
-                    <CIcon icon={cilPlus} /> Add
-                  </CButton>
-                </CCol>
-              </CRow>
-              <div className="d-flex flex-wrap">
-                {cases
-                  .map((c, actualIndex) => ({ ...c, actualIndex }))
-                  .filter((c) => !c.isDeleted)
-                  .map((c) => (
-                    <CButton
-                      color="secondary"
-                      className="me-2 mb-2"
-                      shape="rounded-pill"
-                      key={c?._id || c.actualIndex}
-                      onClick={() => handleRemoveCase(c.actualIndex)}
-                    >
-                      {c.caseTitle} ({c.caseYear}) - {c.courtLicense}
-                      <CIcon icon={cilX} className="ms-1" />
-                    </CButton>
-                  ))}
-              </div>
-            </CCardBody>
-          </CCard>
+          {/* Renowned Cases */}
+          <ListSection
+            title="Renowned Cases"
+            items={cases}
+            onAdd={(val) => {
+              if (val.caseTitle && val.caseYear && val.court && val.link) {
+                const newCase = {
+                  caseTitle: val.caseTitle,
+                  caseYear: Number(val.caseYear),
+                  courtLicense: val.court,
+                  caseLink: val.link,
+                  isDeleted: false,
+                }
+                setCases((prev) => [...prev, newCase])
+              }
+            }}
+            onRemove={handleRemove(setCases, cases)}
+            customInputFields={[
+              { name: 'caseTitle', placeholder: 'Case Title' },
+              { name: 'caseYear', placeholder: 'Year', type: 'number' },
+              { name: 'court', placeholder: 'Court' },
+              { name: 'link', placeholder: 'Link' },
+            ]}
+            addButtonLabel="Add"
+            renderItem={(c, onRemoveClick) => (
+              <CButton
+                color="secondary"
+                className="me-2 mb-2"
+                shape="rounded-pill"
+                key={c._id || c._actualIndex}
+                onClick={onRemoveClick}
+              >
+                {c.caseTitle} ({c.caseYear}) - {c.courtLicense}
+                <CIcon icon={cilX} className="ms-1" />
+              </CButton>
+            )}
+          />
 
           {/* Certificates */}
           <CCard className="mb-4">
-            <CCardHeader className="bg-warning text-white">
-              <h5 className="mb-0">Certificates</h5>
+            <CCardHeader className="bg-warning text-white py-3">
+              <h5 className="mb-0 fw-semibold" style={{ color: '#000' }}>
+                Certificates
+              </h5>
             </CCardHeader>
             <CCardBody>
               <div className="d-flex flex-wrap gap-3 mb-3">
-                {certificateList.map((cert, index) => (
-                  <div key={index} className="position-relative">
-                    <CImage
-                      src={cert}
-                      style={{ width: 150, height: 150, objectFit: 'cover' }}
-                      className="rounded"
-                    />
-                    <CButton
-                      color="secondary"
-                      size="sm"
-                      className="position-absolute top-0 end-0 m-1 rounded-circle"
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        padding: '0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 4px rgba(92, 88, 100, 0.33)',
-                        border: 'none',
-                      }}
-                      onClick={() => {
-                        setCertificateList(certificateList.filter((_, i) => i !== index))
-                      }}
-                    >
-                      <CIcon icon={cilX} size="sm" />
-                    </CButton>
-                  </div>
-                ))}
+                {certificateList
+                  .map((cert, idx) => ({ ...cert, _actualIndex: idx }))
+                  .filter((cert) => !cert.isDeleted)
+                  .map((cert) => (
+                    <div key={cert._id || cert._actualIndex} className="position-relative">
+                      <CImage
+                        src={cert.fileUrl || cert}
+                        style={{ width: 150, height: 150, objectFit: 'cover' }}
+                        className="rounded"
+                      />
+                      <CButton
+                        color="secondary"
+                        size="sm"
+                        className="position-absolute top-0 end-0 m-1 rounded-circle"
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          padding: '0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 2px 4px rgba(92, 88, 100, 0.33)',
+                          border: 'none',
+                        }}
+                        onClick={() => handleRemoveCertificate(cert._actualIndex)}
+                      >
+                        <CIcon icon={cilX} size="sm" />
+                      </CButton>
+                    </div>
+                  ))}
               </div>
               <div className="d-flex gap-2">
                 <input
@@ -886,7 +1170,7 @@ const EditProfile = () => {
                     if (file) {
                       const reader = new FileReader()
                       reader.onloadend = () => {
-                        setCertificateList([...certificateList, reader.result])
+                        handleAddCertificate(reader.result)
                       }
                       reader.readAsDataURL(file)
                     }
@@ -906,8 +1190,14 @@ const EditProfile = () => {
           </CCard>
 
           <div className="text-end mt-4 mb-4">
-            <CButton color="warning" onClick={handleSave}>
-              Save Profile
+            <CButton color="warning" onClick={handleSave} disabled={isSavingProfile}>
+              {isSavingProfile ? (
+                <>
+                  <CSpinner size="sm" className="me-2" /> Saving...
+                </>
+              ) : (
+                'Save Profile'
+              )}
             </CButton>
           </div>
 
@@ -942,6 +1232,13 @@ const EditProfile = () => {
                             ? 'Online Location'
                             : loc.type}
                   </h6>
+                  <CFormLabel>Area</CFormLabel>
+                  <CFormInput
+                    value={loc.area || ''}
+                    onChange={(e) => handleLocationChange(loc.location_id, 'area', e.target.value)}
+                    placeholder="e.g. Johar Town"
+                    className="mb-2"
+                  />
                   <CFormLabel>Address</CFormLabel>
                   <CFormInput
                     value={loc.address || ''}
@@ -999,8 +1296,18 @@ const EditProfile = () => {
           </CCard>
 
           <div className="text-end mt-4">
-            <CButton color="warning" onClick={handleSaveLocationsAndFees}>
-              Save Locations & Fees
+            <CButton
+              color="warning"
+              onClick={handleSaveLocationsAndFees}
+              disabled={isSavingLocations}
+            >
+              {isSavingLocations ? (
+                <>
+                  <CSpinner size="sm" className="me-2" /> Saving...
+                </>
+              ) : (
+                'Save Locations & Fees'
+              )}
             </CButton>
           </div>
 

@@ -94,7 +94,7 @@ export const api = createApi({
     }),
     getLawyerById: builder.query({
       query: (id) => ({
-        url: `/lawyer/${id}`,
+        url: `/admin/lawyers/profile/${id}`,
         method: 'GET',
       }),
     }),
@@ -170,6 +170,13 @@ export const api = createApi({
           body: payload,
         }
       },
+    }),
+    updateLawyerProfile: builder.mutation({
+      query: (payload) => ({
+        url: `/admin/lawyers/update-lawyer-profile`,
+        method: 'POST',
+        body: payload,
+      }),
     }),
     getCities: builder.query({
       query: () => ({
@@ -276,4 +283,5 @@ export const {
   useGetSlotsQuery,
   useUpdateLawyerStatusMutation,
   useGetLawyerAvailabilityQuery,
+  useUpdateLawyerProfileMutation,
 } = api
