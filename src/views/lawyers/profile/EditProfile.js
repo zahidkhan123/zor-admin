@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   CContainer,
   CCard,
@@ -255,6 +255,9 @@ const EditProfile = () => {
   const [category, setCategory] = useState([])
   const [selectedCategories, setSelectedCategories] = useState([])
 
+  // Track removed categories for payload
+  const [removedCategories, setRemovedCategories] = useState([])
+
   const [specializations, setSpecializations] = useState([])
   const [services, setServices] = useState([])
   const [experience, setExperience] = useState([])
@@ -331,6 +334,9 @@ const EditProfile = () => {
     [selectedCategories, categoriesData],
   )
 
+  // Keep a ref of initial categories to help with removal tracking
+  const initialCategoriesRef = useRef([])
+
   useEffect(() => {
     if (lawyerData?.data?.lawyer?.user?.image) {
       fetchSignedUrl(lawyerData.data.lawyer.user.image)
@@ -369,6 +375,8 @@ const EditProfile = () => {
       const categories = Array.isArray(l.categories) ? l.categories : []
       setCategory(categories.map((c) => c._id))
       setSelectedCategories(categories)
+      initialCategoriesRef.current = categories // Save initial categories for removal tracking
+      setRemovedCategories([]) // Reset removed categories on load
 
       // Specializations
       setSpecializations(
@@ -518,6 +526,8 @@ const EditProfile = () => {
       const preselected = lawyerData.data.lawyer.categories
       setCategory(preselected.map((cat) => cat._id))
       setSelectedCategories(preselected)
+      initialCategoriesRef.current = preselected
+      setRemovedCategories([])
     }
   }, [lawyerData])
 
@@ -581,6 +591,34 @@ const EditProfile = () => {
     })
   }
 
+  // --- CATEGORY REMOVE/ADD LOGIC FOR PAYLOAD ---
+
+  // Helper to get category object by _id from categoriesData
+  const getCategoryById = (id) => {
+    return categoriesData?.data?.find((cat) => cat._id === id)
+  }
+
+  // Remove category logic: mark as removed for payload
+  const handleRemoveCategory = (catToRemove) => {
+    setCategory((prev) => prev.filter((id) => id !== catToRemove._id))
+    setSelectedCategories((prev) => prev.filter((c) => c._id !== catToRemove._id))
+    // If the removed category was in the initial categories, add to removedCategories if not already present
+    if (
+      initialCategoriesRef.current.some((cat) => cat._id === catToRemove._id) &&
+      !removedCategories.some((cat) => cat._id === catToRemove._id)
+    ) {
+      setRemovedCategories((prev) => [...prev, { ...catToRemove, isDeleted: true }])
+    }
+  }
+
+  // Add category logic: add to selectedCategories, remove from removedCategories if present
+  const handleAddCategory = (catToAdd) => {
+    setCategory((prev) => [...prev, catToAdd._id])
+    setSelectedCategories((prev) => [...prev, catToAdd])
+    // If this category was previously removed, remove it from removedCategories
+    setRemovedCategories((prev) => prev.filter((cat) => cat._id !== catToAdd._id))
+  }
+
   // Certificates logic
   const handleAddCertificate = (fileUrl) => {
     setCertificateList((prev) => [...prev, { fileUrl, isDeleted: false }])
@@ -638,20 +676,33 @@ const EditProfile = () => {
 
     setIsSavingProfile(true)
     setToastVisible(false)
-    debugger
 
-    const categoriesPayload =
-      selectedCategories && selectedCategories.length > 0
-        ? selectedCategories.map((cat) => ({
-            name: cat.name,
-            _id: cat._id,
-            ...(cat.isDeleted ? { isDeleted: true } : {}),
-          }))
-        : []
-    debugger
+    // Build categories payload:
+    // - All currently selected categories (with isDeleted if present)
+    // - All removed categories (with isDeleted: true)
+    // - If a category is both in selected and removed, only keep the selected (i.e., not deleted)
+    // - If a category is new (not in initialCategoriesRef), just add as normal
+
+    // 1. Build a map of selected categories by _id
+    const selectedMap = {}
+    selectedCategories.forEach((cat) => {
+      selectedMap[cat._id] = { ...cat, isDeleted: !!cat.isDeleted }
+    })
+
+    // 2. Add removed categories (isDeleted: true) if not in selected
+    removedCategories.forEach((cat) => {
+      if (!selectedMap[cat._id]) {
+        selectedMap[cat._id] = { ...cat, isDeleted: true }
+      }
+    })
+
+    // 3. Build the final array
+    const categoriesPayload = Object.values(selectedMap).map((cat) => ({
+      name: cat.name,
+      ...(cat.isDeleted && { _id: cat._id, isDeleted: true }),
+    }))
+
     // Optionally, include image_url if you have it (for now, using profileImage if available)
-    // If you want to send the original image url from the user, you can use lawyerData?.data?.lawyer?.user?.image
-    // For now, let's use profileImage if it's a string and not a data URL (i.e., not a new upload)
     let image_url = ''
     if (
       lawyerData?.data?.lawyer?.user?.image &&
@@ -942,14 +993,10 @@ const EditProfile = () => {
                                   )
 
                                   if (e.target.checked && !isSelected && category.length < 2) {
-                                    setCategory((prev) => [...prev, selectedId])
-                                    setSelectedCategories((prev) => [...prev, selectedCat])
+                                    handleAddCategory(selectedCat)
                                   } else if (!e.target.checked && isSelected) {
                                     // Remove category
-                                    setCategory((prev) => prev.filter((id) => id !== selectedId))
-                                    setSelectedCategories((prev) =>
-                                      prev.filter((cat) => cat._id !== selectedId),
-                                    )
+                                    handleRemoveCategory(selectedCat)
                                   }
                                 }}
                               />
@@ -985,10 +1032,7 @@ const EditProfile = () => {
                               style={{ cursor: 'pointer' }}
                               onClick={() => {
                                 // Remove category when badge X is clicked
-                                setCategory((prev) => prev.filter((id) => id !== cat._id))
-                                setSelectedCategories((prev) =>
-                                  prev.filter((c) => c._id !== cat._id),
-                                )
+                                handleRemoveCategory(cat)
                               }}
                             />
                           </CBadge>
