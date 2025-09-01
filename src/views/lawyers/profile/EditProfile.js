@@ -534,9 +534,12 @@ const EditProfile = () => {
   // Micro validation for categories, services, specializations, education
   // Run on every change
   useEffect(() => {
-    // Categories: at least 2
-    if (selectedCategories.length < 2) {
-      setCategoryError('Please select at least two categories.')
+    // Categories: at least 1, at most 2, and must be unique
+    const uniqueCatIds = Array.from(new Set(selectedCategories.map((c) => c._id)))
+    if (uniqueCatIds.length < 1) {
+      setCategoryError('Please select at least one category.')
+    } else if (uniqueCatIds.length > 2) {
+      setCategoryError('You can select at most two unique categories.')
     } else {
       setCategoryError('')
     }
@@ -613,10 +616,15 @@ const EditProfile = () => {
 
   // Add category logic: add to selectedCategories, remove from removedCategories if present
   const handleAddCategory = (catToAdd) => {
-    setCategory((prev) => [...prev, catToAdd._id])
-    setSelectedCategories((prev) => [...prev, catToAdd])
-    // If this category was previously removed, remove it from removedCategories
-    setRemovedCategories((prev) => prev.filter((cat) => cat._id !== catToAdd._id))
+    // Only add if not already present and if less than 2 unique categories
+    const alreadySelected = selectedCategories.some((c) => c._id === catToAdd._id)
+    const uniqueCatIds = Array.from(new Set(selectedCategories.map((c) => c._id)))
+    if (!alreadySelected && uniqueCatIds.length < 2) {
+      setCategory((prev) => [...prev, catToAdd._id])
+      setSelectedCategories((prev) => [...prev, catToAdd])
+      // If this category was previously removed, remove it from removedCategories
+      setRemovedCategories((prev) => prev.filter((cat) => cat._id !== catToAdd._id))
+    }
   }
 
   // Certificates logic
@@ -656,8 +664,13 @@ const EditProfile = () => {
   const handleSave = async () => {
     // Micro validation before save
     let hasError = false
-    if (selectedCategories.length < 2) {
-      setCategoryError('Please select at least two categories.')
+    const uniqueCatIds = Array.from(new Set(selectedCategories.map((c) => c._id)))
+    if (uniqueCatIds.length < 1) {
+      setCategoryError('Please select at least one category.')
+      hasError = true
+    }
+    if (uniqueCatIds.length > 2) {
+      setCategoryError('You can select at most two unique categories.')
       hasError = true
     }
     if (specializations.filter((s) => !s.isDeleted).length === 0) {
@@ -696,11 +709,21 @@ const EditProfile = () => {
       }
     })
 
-    // 3. Build the final array
-    const categoriesPayload = Object.values(selectedMap).map((cat) => ({
-      name: cat.name,
-      ...(cat.isDeleted && { _id: cat._id, isDeleted: true }),
-    }))
+    // 3. Build the final array, but only include up to 2 unique categories (enforced above)
+    const categoriesPayload = Object.values(selectedMap)
+      .filter((cat, idx, arr) => {
+        // Only keep up to 2 unique categories (by _id)
+        if (!cat.isDeleted) {
+          // Only count non-deleted
+          const nonDeleted = arr.filter((c) => !c.isDeleted)
+          return nonDeleted.findIndex((c) => c._id === cat._id) === idx
+        }
+        return true // keep deleted for payload
+      })
+      .map((cat) => ({
+        name: cat.name,
+        ...(cat.isDeleted && { _id: cat._id, isDeleted: true }),
+      }))
 
     // Optionally, include image_url if you have it (for now, using profileImage if available)
     let image_url = ''
@@ -978,7 +1001,8 @@ const EditProfile = () => {
                       <CDropdownMenu style={{ maxHeight: '200px', overflowY: 'auto' }}>
                         {categoriesData?.data?.map((cat) => {
                           const isSelected = category.includes(cat._id)
-                          const isMaxSelected = category.length >= 2 && !isSelected
+                          const uniqueCatIds = Array.from(new Set(category))
+                          const isMaxSelected = uniqueCatIds.length >= 2 && !isSelected
                           return (
                             <div key={cat._id} className="px-3 py-1">
                               <CFormCheck
@@ -993,7 +1017,7 @@ const EditProfile = () => {
                                     (c) => c._id === selectedId,
                                   )
 
-                                  if (e.target.checked && !isSelected && category.length < 2) {
+                                  if (e.target.checked && !isSelected && uniqueCatIds.length < 2) {
                                     handleAddCategory(selectedCat)
                                   } else if (!e.target.checked && isSelected) {
                                     // Remove category
