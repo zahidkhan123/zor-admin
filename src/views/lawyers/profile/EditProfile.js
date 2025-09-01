@@ -785,6 +785,7 @@ const EditProfile = () => {
       lawyer_id: id,
       lawyer_data: payload,
     }
+    debugger
     try {
       const res = await updateLawyerProfile(payloadData)
       if (res?.data?.success) {
