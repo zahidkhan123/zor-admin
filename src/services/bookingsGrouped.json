@@ -5,7 +5,7 @@
       "lawyer": {
         "name": "Advocate Zia",
         "gender": "Female",
-        "email": "abc123@gmail.com",
+        "email": "advziacombo@gmail.com",
         "phone": "0300-123442321",
         "age": 24,
         "specialty": ["Tax", "FBR/FBI"]
@@ -13,7 +13,7 @@
       "user": {
         "name": "Allauddin",
         "gender": "Male",
-        "email": "abc123@gmail.com",
+        "email": "allauddinadv@gmail.com",
         "phone": "0321-55434521",
         "age": 28,
         "reason": "Tax, FBR"
@@ -145,7 +145,7 @@
       "lawyer": {
         "name": "abdulrehman",
         "gender": "Male",
-        "email": "abc123@gmail.com",
+        "email": "abdulrehman02@gmail.com",
         "phone": "0300-123442321",
         "age": 24,
         "specialty": ["Tax", "FBR/FBI"]
@@ -153,7 +153,7 @@
       "user": {
         "name": "Rehana Riaz",
         "gender": "Male",
-        "email": "abc123@gmail.com",
+        "email": "rehanariazadv@gmail.com",
         "phone": "0321-55434521",
         "age": 28,
         "reason": "Tax, FBR"
@@ -811,7 +811,7 @@
       "user": {
         "name": "Allauddin",
         "gender": "Male",
-        "email": "abc123@gmail.com",
+        "email": "allauddinadv@gmail.com",
         "phone": "0321-55434521",
         "age": 28,
         "reason": "Tax, FBR"
