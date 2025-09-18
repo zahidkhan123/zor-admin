@@ -2,36 +2,38 @@ import React from 'react'
 import { CRow, CCol, CImage, CButton, CBadge, CCard, CCardBody, CContainer } from '@coreui/react'
 import { cilSwapHorizontal, cilPencil } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 
-const booking = {
-  lawyer: {
-    name: 'Barr. Ali Raza',
-    email: 'abc123@gmail.com',
-    phone: '0300-123442321',
-    age: 24,
-    gender: 'Male',
-    specialty: ['Tax', 'FBR/FBI'],
-  },
-  client: {
-    name: 'Shahzaib',
-    email: 'abc123@gmail.com',
-    phone: '0321-55434521',
-    age: 28,
-    gender: 'Male',
-    reason: 'Tax, FBR',
-  },
-  category: 'Criminal Defense',
-  type: 'Home Office',
-  date: '08/05/2025',
-  time: '8:00PM',
-  address: '056/1, Phase 3, Sector W, Bahria Town Near RailwayStation Rawalpindi, Islamabad',
-}
+// const booking = {
+//   lawyer: {
+//     name: 'Barr. Ali Raza',
+//     email: 'abc123@gmail.com',
+//     phone: '0300-123442321',
+//     age: 24,
+//     gender: 'Male',
+//     specialty: ['Tax', 'FBR/FBI'],
+//   },
+//   client: {
+//     name: 'Shahzaib',
+//     email: 'abc123@gmail.com',
+//     phone: '0321-55434521',
+//     age: 28,
+//     gender: 'Male',
+//     reason: 'Tax, FBR',
+//   },
+//   category: 'Criminal Defense',
+//   type: 'Home Office',
+//   date: '08/05/2025',
+//   time: '8:00PM',
+//   address: '056/1, Phase 3, Sector W, Bahria Town Near RailwayStation Rawalpindi, Islamabad',
+// }
 
 const BookingDetail = () => {
   const navigate = useNavigate()
-  const { id } = useParams()
-
+  const location = useLocation()
+  console.log('location', location)
+  const booking = location.state.booking
+  console.log('booking')
   return (
     <CContainer className="my-4">
       <h4 className="fw-bold mb-3">Booking Details</h4>
@@ -91,15 +93,6 @@ const BookingDetail = () => {
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
-                  <div className="d-grid gap-3">
-                    <CButton color="light" variant="outline" className="py-2 px-3">
-                      View Profile
-                    </CButton>
-                    <CButton color="danger" className="py-2 px-3">
-                      <CIcon icon={cilSwapHorizontal} className="me-2" />
-                      Swap Lawyer
-                    </CButton>
-                  </div>
                 </CCol>
 
                 {/* Right: text info */}
@@ -115,7 +108,7 @@ const BookingDetail = () => {
                         verticalAlign: 'middle',
                       }}
                     >
-                      {booking.lawyer.name}
+                      {booking?.lawyer?.name}
                     </h5>
                     <span
                       className="ms-2"
@@ -129,21 +122,21 @@ const BookingDetail = () => {
                   <div style={{ lineHeight: '1.8', fontSize: '1.05rem' }}>
                     <p className="mb-2">
                       <strong>Email Address: </strong>
-                      <span className="ms-1">{booking.lawyer.email}</span>
+                      <span className="ms-1">{booking?.lawyer?.email}</span>
                     </p>
                     <p className="mb-2">
                       <strong>Phone: </strong>
-                      <span className="ms-1">{booking.lawyer.phone}</span>
+                      <span className="ms-1">{booking?.lawyer?.phone}</span>
                     </p>
                     <p className="mb-2">
                       <strong>Age/Gender: </strong>
                       <span className="ms-1">
-                        {booking.lawyer.age}yrs / {booking.lawyer.gender}
+                        {booking?.lawyer?.age}yrs / {booking?.lawyer?.gender}
                       </span>
                     </p>
                     <p className="mb-0">
                       <strong>Specialty: </strong>
-                      <span className="ms-1">{booking.lawyer.specialty.join(', ')}</span>
+                      <span className="ms-1">{booking?.lawyer?.specialty?.join(', ')}</span>
                     </p>
                   </div>
                 </CCol>
@@ -197,27 +190,27 @@ const BookingDetail = () => {
                         verticalAlign: 'middle',
                       }}
                     >
-                      {booking.client.name}
+                      {booking?.user?.name}
                     </h5>
                   </div>
                   <div style={{ lineHeight: '1.8', fontSize: '1.05rem' }}>
                     <p className="mb-2">
                       <strong>Email Address : </strong>
-                      <span className="ms-1">{booking.client.email}</span>
+                      <span className="ms-1">{booking?.user?.email}</span>
                     </p>
                     <p className="mb-2">
                       <strong>Phone: </strong>
-                      <span className="ms-1">{booking.client.phone}</span>
+                      <span className="ms-1">{booking?.user?.phone}</span>
                     </p>
                     <p className="mb-2">
                       <strong>Age/Gender: </strong>
                       <span className="ms-1">
-                        {booking.client.age}yrs / {booking.client.gender}
+                        {booking?.user?.age}yrs / {booking?.user?.gender}
                       </span>
                     </p>
                     <p className="mb-0">
                       <strong>Reason: </strong>
-                      <span className="ms-1">{booking.client.reason}</span>
+                      <span className="ms-1">{booking?.user?.reason}</span>
                     </p>
                   </div>
                 </CCol>
@@ -248,7 +241,7 @@ const BookingDetail = () => {
                 </p>
                 {booking.type !== 'Online' && (
                   <p className="mb-0">
-                    <strong>Address (if not Online): </strong>
+                    <strong>Address </strong>
                     {booking.address}
                   </p>
                 )}
