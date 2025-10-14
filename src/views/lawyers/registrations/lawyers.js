@@ -26,6 +26,7 @@ import {
   CWidgetStatsC,
   CFormInput,
   CFormSelect,
+  CBadge,
 } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
@@ -344,6 +345,9 @@ const Registration = () => {
               <CTableHeaderCell className="bg-body-tertiary text-center">
                 Age & Gender
               </CTableHeaderCell>
+              <CTableHeaderCell className="bg-body-tertiary text-center">
+                Payment Status
+              </CTableHeaderCell>
               <CTableHeaderCell className="bg-body-tertiary text-center">Action</CTableHeaderCell>
             </CTableRow>
           </CTableHead>
@@ -380,6 +384,14 @@ const Registration = () => {
                   <CTableDataCell className="text-center">
                     {`${lawyer?.age || 'N/A'} / ${lawyer?.gender || 'N/A'}`}
                   </CTableDataCell>
+                  {/* <CTableDataCell className="text-center">
+                    {`${lawyer?.is_paid === true ? 'Paid' : 'Unpaid'}`}
+                  </CTableDataCell> */}
+                  <CTableDataCell className="text-center">
+                    <CBadge color={lawyer?.is_paid === true ? 'success' : 'danger'}>
+                      {lawyer?.is_paid === true ? 'Paid' : 'Unpaid'}
+                    </CBadge>
+                  </CTableDataCell>
                   <CTableDataCell className="text-center">
                     <CDropdown alignment="end">
                       <span style={{ fontSize: '24px', cursor: 'pointer' }}>⋮</span>
@@ -389,7 +401,7 @@ const Registration = () => {
               ))
             ) : (
               <CTableRow>
-                <CTableDataCell colSpan={6} className="text-center py-4">
+                <CTableDataCell colSpan={7} className="text-center py-4">
                   {debouncedSearchTerm ? 'No matching lawyers found.' : 'No lawyers found.'}
                 </CTableDataCell>
               </CTableRow>

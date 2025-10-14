@@ -36,9 +36,11 @@ const tabs = [
   { key: 'confirmed', label: 'Upcoming' },
   { key: 'completed', label: 'Completed' },
   { key: 'cancelled', label: 'Cancelled' },
+  { key: 'incomplete', label: 'Incomplete' },
+
   { key: 'all', label: 'All Bookings' },
 ]
-const PAGE_SIZE = 10 // Changed to match backend default
+const PAGE_SIZE = 100 // Changed to match backend default
 
 const Bookings = () => {
   const navigate = useNavigate()
@@ -93,6 +95,7 @@ const Bookings = () => {
   const totalPages =
     pagination?.totalPages !== undefined ? pagination.totalPages : bookings.length > 0 ? 1 : 0
 
+  console.log('bookings', bookings)
   useEffect(() => {
     if (location?.state?.tab) {
       setActiveTab(location.state.tab)
@@ -246,6 +249,14 @@ const Bookings = () => {
               progress={{ color: 'warning', value: 75 }}
             />
           </CCol>
+          {/* <CCol xs={12} sm={4} lg={4} xxl={4} className="mb-4">
+            <CWidgetStatsC
+              icon={<CIcon icon={cilCalendar} height={36} />}
+              value={summary?.totalIncompleteBookings?.toString() || '0'}
+              title={'Incomplete Bookings'}
+              progress={{ color: 'warning', value: 75 }}
+            />
+          </CCol> */}
           <CCol xs={12} sm={4} lg={4} xxl={4} className="mb-4">
             <CWidgetStatsC
               icon={<CIcon icon={cilCalendar} height={36} />}
@@ -385,13 +396,13 @@ const Bookings = () => {
                             : 'secondary'
                       }
                     >
-                      {booking?.payments?.status}
+                      {booking?.payments?.status || 'N/A'}
                     </CBadge>
                   </CTableDataCell>
                   <CTableDataCell className="text-center">
                     {booking?.payments?.payable_amount
                       ? `Rs. ${booking.payments.payable_amount}`
-                      : '-'}
+                      : 'N/A'}
                   </CTableDataCell>
                   <CTableDataCell className="text-center">
                     <CDropdown alignment="end">

@@ -31,16 +31,36 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 const BookingDetail = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  console.log('location', location)
-  const booking = location.state.booking
-  console.log('booking')
+  const booking = location?.state?.booking
+
+  // Helper functions
+  const getAge = (dob) => {
+    if (!dob) return '-'
+    const birthDate = new Date(dob)
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const m = today.getMonth() - birthDate.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-'
+    const date = new Date(dateStr)
+    return date.toLocaleDateString()
+  }
+
+  const lawyerCategories = booking?.lawyer?.categories?.map((cat) => cat?.name).join(', ') || '-'
+
   return (
     <CContainer className="my-4">
       <h4 className="fw-bold mb-3">Booking Details</h4>
 
       <CCard className="border-0 shadow-sm position-relative">
         {/* Edit pill (top-right) */}
-        <CButton
+        {/* <CButton
           color="light"
           variant="outline"
           size="sm"
@@ -48,7 +68,7 @@ const BookingDetail = () => {
         >
           <CIcon icon={cilPencil} className="me-2" />
           Edit
-        </CButton>
+        </CButton> */}
 
         <CCardBody className="pt-4 pb-3 position-relative">
           {/* vertical orange divider */}
@@ -58,10 +78,10 @@ const BookingDetail = () => {
               marginTop: '20px',
               top: '16px',
               bottom: '0',
-              left: '40%',
+              left: '45%',
               width: '1px',
               background: 'rgb(244, 180, 0)',
-              height: '50%',
+              height: '40%',
             }}
           />
 
@@ -73,7 +93,7 @@ const BookingDetail = () => {
               </h6>
 
               <CRow className="g-4 align-items-start">
-                {/* Left: avatar + stacked buttons */}
+                {/* Left: avatar */}
                 <CCol xs="auto" className="text-center">
                   <div
                     style={{
@@ -87,7 +107,7 @@ const BookingDetail = () => {
                     }}
                   >
                     <CImage
-                      src="https://via.placeholder.com/120"
+                      src={booking?.lawyer?.image}
                       width={120}
                       height={120}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -122,21 +142,37 @@ const BookingDetail = () => {
                   <div style={{ lineHeight: '1.8', fontSize: '1.05rem' }}>
                     <p className="mb-2">
                       <strong>Email Address: </strong>
-                      <span className="ms-1">{booking?.lawyer?.email}</span>
+                      <span className="ms-1">{booking?.user?.email || '-'}</span>
                     </p>
                     <p className="mb-2">
                       <strong>Phone: </strong>
-                      <span className="ms-1">{booking?.lawyer?.phone}</span>
+                      <span className="ms-1">{booking?.user?.phone || '-'}</span>
                     </p>
                     <p className="mb-2">
-                      <strong>Age/Gender: </strong>
-                      <span className="ms-1">
-                        {booking?.lawyer?.age}yrs / {booking?.lawyer?.gender}
-                      </span>
+                      <strong>Gender: </strong>
+                      <span className="ms-1">{booking?.user?.gender || '-'}</span>
                     </p>
-                    <p className="mb-0">
-                      <strong>Specialty: </strong>
-                      <span className="ms-1">{booking?.lawyer?.specialty?.join(', ')}</span>
+                    <p className="mb-2">
+                      <strong>Age: </strong>
+                      <span className="ms-1">{getAge(booking?.user?.dob)} yrs</span>
+                    </p>
+                    <p className="mb-2">
+                      <strong>Whatsapp: </strong>
+                      <span className="ms-1">{booking?.user?.whatsapp || '-'}</span>
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      lineHeight: '1.8',
+                      fontSize: '1.05rem',
+                      maxWidth: '320px',
+                      wordBreak: 'break-word',
+                      whiteSpace: 'pre-line',
+                    }}
+                  >
+                    <p className="mb-2" style={{ marginBottom: 0 }}>
+                      <strong>Categories: </strong>
+                      <span className="ms-1">{lawyerCategories}</span>
                     </p>
                   </div>
                 </CCol>
@@ -164,7 +200,7 @@ const BookingDetail = () => {
                     }}
                   >
                     <CImage
-                      src="https://via.placeholder.com/120"
+                      src={booking?.user?.image}
                       width={120}
                       height={120}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -195,22 +231,24 @@ const BookingDetail = () => {
                   </div>
                   <div style={{ lineHeight: '1.8', fontSize: '1.05rem' }}>
                     <p className="mb-2">
-                      <strong>Email Address : </strong>
-                      <span className="ms-1">{booking?.user?.email}</span>
+                      <strong>Email Address: </strong>
+                      <span className="ms-1">{booking?.user?.email || '-'}</span>
                     </p>
                     <p className="mb-2">
                       <strong>Phone: </strong>
-                      <span className="ms-1">{booking?.user?.phone}</span>
+                      <span className="ms-1">{booking?.user?.phone || '-'}</span>
                     </p>
                     <p className="mb-2">
-                      <strong>Age/Gender: </strong>
-                      <span className="ms-1">
-                        {booking?.user?.age}yrs / {booking?.user?.gender}
-                      </span>
+                      <strong>Gender: </strong>
+                      <span className="ms-1">{booking?.user?.gender || '-'}</span>
                     </p>
-                    <p className="mb-0">
-                      <strong>Reason: </strong>
-                      <span className="ms-1">{booking?.user?.reason}</span>
+                    <p className="mb-2">
+                      <strong>Age: </strong>
+                      <span className="ms-1">{getAge(booking?.user?.dob)} yrs</span>
+                    </p>
+                    <p className="mb-2">
+                      <strong>Whatsapp: </strong>
+                      <span className="ms-1">{booking?.user?.whatsapp || '-'}</span>
                     </p>
                   </div>
                 </CCol>
@@ -224,25 +262,69 @@ const BookingDetail = () => {
             <CCardBody className="pt-4 pb-3 position-relative">
               <div className="mb-2">
                 <p className="mb-2">
-                  <strong>Category : </strong>
-                  <CBadge color="secondary" className="ms-1">
-                    {booking.category}
+                  <strong>Status: </strong>
+                  <CBadge
+                    color={
+                      booking?.status === 'completed'
+                        ? 'success'
+                        : booking?.status === 'cancelled'
+                          ? 'danger'
+                          : 'secondary'
+                    }
+                    className="ms-1"
+                  >
+                    {booking?.status || '-'}
                   </CBadge>
                 </p>
                 <p className="mb-2">
-                  <strong>Appointment Type : </strong>
+                  <strong>Appointment Type: </strong>
                   <CBadge color="dark" className="ms-1">
-                    {booking.type}
+                    {booking?.location || '-'}
                   </CBadge>
                 </p>
                 <p className="mb-2">
-                  <strong>Appointment Date / Time : </strong>
-                  {booking.date} | {booking.time}
+                  <strong>Appointment Date / Time: </strong>
+                  {formatDate(booking?.date)} | {booking?.slot || '-'}
                 </p>
-                {booking.type !== 'Online' && (
+                <p className="mb-2">
+                  <strong>Payment Status: </strong>
+                  <CBadge
+                    color={
+                      booking?.payments?.status === 'paid'
+                        ? 'success'
+                        : booking?.payments?.status === 'unpaid'
+                          ? 'warning'
+                          : 'secondary'
+                    }
+                    className="ms-1"
+                  >
+                    {booking?.payments?.status || '-'}
+                  </CBadge>
+                </p>
+                <p className="mb-2">
+                  <strong>Payment Type: </strong>
+                  <span className="ms-1">{booking?.payments?.payment_type || '-'}</span>
+                </p>
+                <p className="mb-2">
+                  <strong>Payable Amount: </strong>
+                  <span className="ms-1">
+                    {typeof booking?.payments?.payable_amount === 'number'
+                      ? `Rs. ${booking.payments.payable_amount}`
+                      : '-'}
+                  </span>
+                </p>
+                <p className="mb-2">
+                  <strong>Total Amount: </strong>
+                  <span className="ms-1">
+                    {typeof booking?.payments?.total_amount === 'number'
+                      ? `Rs. ${booking.payments.total_amount}`
+                      : '-'}
+                  </span>
+                </p>
+                {booking?.location !== 'Online' && (
                   <p className="mb-0">
-                    <strong>Address </strong>
-                    {booking.address}
+                    <strong>Address: </strong>
+                    <span className="ms-1">{booking?.address || '-'}</span>
                   </p>
                 )}
               </div>
