@@ -67,7 +67,14 @@ export const api = createApi({
       }),
     }),
     getLawyers: builder.query({
-      query: ({ page = 1, limit = 10, type = null, search = null, city = null }) => ({
+      query: ({
+        page = 1,
+        limit = 10,
+        type = null,
+        search = null,
+        city = null,
+        is_paid = null,
+      }) => ({
         url: '/admin/lawyers',
         params: {
           page,
@@ -75,6 +82,8 @@ export const api = createApi({
           ...(type && { type }),
           ...(search && { search }),
           ...(city && { city }),
+          ...(is_paid === true && { is_paid: true }),
+          ...(is_paid === false && { is_paid: false }),
         },
       }),
     }),
@@ -250,6 +259,39 @@ export const api = createApi({
         method: 'GET',
       }),
     }),
+    // New endpoints for booking creation
+    getLawyersByCategory: builder.query({
+      query: ({ category, page = 1, limit = 10, city = null, query = null }) => ({
+        url: '/lawyer/all',
+        params: {
+          category,
+          page,
+          limit,
+          ...(city && { city }),
+          ...(query && { query }),
+        },
+      }),
+    }),
+    getAvailableSlots: builder.query({
+      query: ({ day, location, lawyer_id }) => ({
+        url: '/lawyer/available-slots',
+        params: {
+          day,
+          location,
+          lawyer_id,
+        },
+      }),
+    }),
+    uploadImage: builder.mutation({
+      query: (formData) => ({
+        url: '/upload',
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }),
+    }),
   }),
 })
 
@@ -284,4 +326,7 @@ export const {
   useUpdateLawyerStatusMutation,
   useGetLawyerAvailabilityQuery,
   useUpdateLawyerProfileMutation,
+  useGetLawyersByCategoryQuery,
+  useGetAvailableSlotsQuery,
+  useUploadImageMutation,
 } = api
