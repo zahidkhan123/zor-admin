@@ -52,6 +52,12 @@ const ViewAvailability = React.lazy(() => import('./views/lawyers/profile/viewAv
 }
 const Bookings = React.lazy(() => import('./views/bookings/bookings'))
 const BookingDetail = React.lazy(() => import('./views/bookings/BookingDetail'))
+const CreateBooking = React.lazy(() => import('./views/bookings/createBooking'))
+{
+  /*Finance routes */
+}
+const Finance = React.lazy(() => import('./views/finance/finance'))
+const FinanceDetail = React.lazy(() => import('./views/finance/financeDetail'))
 
 const routes = [
   // { path: '/', exact: true, name: 'Home' },
@@ -85,6 +91,9 @@ const routes = [
   { path: '/profile/view-availability', name: 'View Availability', element: ViewAvailability },
   { path: '/bookings', name: 'Bookings', element: Bookings },
   { path: '/bookings/detail/:id', name: 'Booking Detail', element: BookingDetail },
+  // { path: '/bookings/create', name: 'Create Booking', element: CreateBooking },
+  { path: '/finance', name: 'Finance', element: Finance },
+  { path: '/finance/detail/:id', name: 'Finance Detail', element: FinanceDetail },
 ]
 
 export default routes

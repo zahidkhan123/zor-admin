@@ -59,6 +59,12 @@ const ViewProfileSetup = React.lazy(() => import('./views/lawyers/ProfileSetupSt
 }
 const Bookings = React.lazy(() => import('./views/bookings/bookings'))
 const BookingDetail = React.lazy(() => import('./views/bookings/BookingDetail'))
+const CreateBooking = React.lazy(() => import('./views/bookings/createBooking'))
+{
+  /*Finance routes */
+}
+const Finance = React.lazy(() => import('./views/finance/finance'))
+const FinanceDetail = React.lazy(() => import('./views/finance/financeDetail'))
 
 // Components
 const ProtectedRoute = React.lazy(() => import('./components/ProtectedRoute'))
@@ -136,6 +142,10 @@ const App = () => {
             {/* Bookings routes */}
             <Route path="bookings" element={<Bookings />} />
             <Route path="bookings/detail/:id" element={<BookingDetail />} />
+            {/* <Route path="bookings/create" element={<CreateBooking />} /> */}
+            {/* Finance routes */}
+            <Route path="finance" element={<Finance />} />
+            <Route path="finance/detail/:id" element={<FinanceDetail />} />
           </Route>
 
           {/* Catch-all */}

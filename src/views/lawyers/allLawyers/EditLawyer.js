@@ -18,20 +18,28 @@ import {
   CToastClose,
   CSpinner,
 } from '@coreui/react'
-import { cilCalendar, cilPen } from '@coreui/icons'
+import { cilCalendar, cilPen, cilCloudUpload } from '@coreui/icons'
 import { FaExclamationCircle } from 'react-icons/fa'
 import CIcon from '@coreui/icons-react'
-import { useGetDropdownsQuery, useCreateLawyerMutation } from '../../../services/api'
+import {
+  useGetDropdownsQuery,
+  useCreateLawyerMutation,
+  useUploadImageMutation,
+} from '../../../services/api'
 
 const LawyerProfileForm = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { data: dropdowns } = useGetDropdownsQuery('Gender,Court')
   const [createLawyer, { isLoading }] = useCreateLawyerMutation()
+  const [uploadImage] = useUploadImageMutation()
   const { lawyer, mode } = location.state || { mode: 'add' }
   const [submitError, setSubmitError] = useState(null)
   const [showToast, setShowToast] = useState(false)
   const [errors, setErrors] = useState({})
+  const [proofImage, setProofImage] = useState(null)
+  const [proofImagePreview, setProofImagePreview] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -103,6 +111,56 @@ const LawyerProfileForm = () => {
     }))
   }
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size should be less than 5MB')
+      return
+    }
+
+    setProofImage(file)
+    setUploadingImage(true)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setProofImagePreview(e.target.result)
+    }
+    reader.readAsDataURL(file)
+
+    try {
+      // Create FormData for upload
+      const formDataObj = new FormData()
+      formDataObj.append('image', file)
+
+      // Upload image
+      const response = await uploadImage(formDataObj).unwrap()
+      console.log('response', response)
+      if (response.success) {
+        setFormData((prev) => ({
+          ...prev,
+          proofImageUrl: response.data.url,
+          proofImageKey: response.data.key,
+        }))
+      }
+    } catch (error) {
+      alert('Failed to upload image. Please try again.')
+      setProofImage(response.data.url)
+      setProofImagePreview(response.data.url)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -121,6 +179,11 @@ const LawyerProfileForm = () => {
 
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match.'
+    }
+
+    // Require proof image for new lawyers
+    if (mode === 'add' && !formData.proofImageUrl) {
+      newErrors.proofImage = 'Proof image is required.'
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -371,6 +434,116 @@ const LawyerProfileForm = () => {
                 {errors.confirmPassword && (
                   <small className="text-danger">{errors.confirmPassword}</small>
                 )}
+              </CCol>
+            </CRow>
+
+            {/* Upload Proof Section */}
+            <CRow className="mb-4">
+              <CCol md={12}>
+                <CFormLabel>Upload Proof Document</CFormLabel>
+                <div className="d-flex flex-column align-items-start">
+                  {proofImagePreview ? (
+                    <div style={{ width: '300px', position: 'relative' }}>
+                      <img
+                        src={proofImagePreview}
+                        alt="Proof preview"
+                        className="img-fluid rounded border"
+                        style={{
+                          maxHeight: '150px',
+                          width: '100%',
+                          objectFit: 'cover',
+                          boxShadow: '0 4px 16px rgba(255,193,7,0.06)',
+                          border: '2px solid #f6bd60',
+                        }}
+                      />
+                      {proofImage && formData.proofImageUrl && (
+                        <div className="mt-2 p-2 bg-success-subtle rounded border border-success w-100">
+                          <div className="small text-success fw-medium">
+                            ✓ Proof document uploaded successfully
+                          </div>
+                          <div className="small text-muted">File: {proofImage.name}</div>
+                        </div>
+                      )}
+                      {uploadingImage && (
+                        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-25 rounded">
+                          <CSpinner size="sm" className="text-white" />
+                        </div>
+                      )}
+                      <div className="mt-2 d-flex gap-2 flex-wrap">
+                        <CButton
+                          size="sm"
+                          color="secondary"
+                          variant="outline"
+                          onClick={() => document.getElementById('proofUpload').click()}
+                          disabled={uploadingImage}
+                        >
+                          Change Document
+                        </CButton>
+                        <CButton
+                          size="sm"
+                          color="danger"
+                          variant="outline"
+                          onClick={() => {
+                            setProofImage(null)
+                            setProofImagePreview(null)
+                            setFormData((prev) => ({
+                              ...prev,
+                              proofImageUrl: '',
+                              proofImageKey: '',
+                            }))
+                          }}
+                          disabled={uploadingImage}
+                        >
+                          Remove
+                        </CButton>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="d-flex flex-column align-items-center justify-content-center rounded-3 border py-4 px-3"
+                      style={{
+                        borderStyle: 'dashed',
+                        borderColor: '#f6bd60',
+                        backgroundColor: '#fffdfa',
+                        minHeight: '150px',
+                        width: '300px',
+                        cursor: 'pointer',
+                        transition: 'box-shadow 0.2s',
+                        boxShadow: '0 1px 6px rgba(246,189,96,.08)',
+                      }}
+                      onClick={() => document.getElementById('proofUpload').click()}
+                    >
+                      {uploadingImage ? (
+                        <div className="text-center">
+                          <CSpinner size="sm" />
+                          <div className="mt-2 small text-muted">Uploading...</div>
+                        </div>
+                      ) : (
+                        <>
+                          <CIcon icon={cilCloudUpload} className="text-warning mb-2" size="xl" />
+                          <div className="text-center">
+                            <div className="small fw-medium text-dark">
+                              Click to upload proof document
+                            </div>
+                            <div className="small text-muted">PNG, JPG, PDF up to 5MB</div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    id="proofUpload"
+                    name="proof"
+                    accept="image/*,.pdf"
+                    onChange={handleFileUpload}
+                    className="d-none"
+                    disabled={uploadingImage}
+                  />
+                  {errors.proofImage && (
+                    <small className="text-danger mt-2">{errors.proofImage}</small>
+                  )}
+                </div>
               </CCol>
             </CRow>
 

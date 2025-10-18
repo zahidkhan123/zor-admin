@@ -56,9 +56,23 @@ const Registration = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [citySearchTerm, setCitySearchTerm] = useState('')
   const [debouncedCitySearchTerm, setDebouncedCitySearchTerm] = useState('')
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('') // New: for paid/unpaid filter
 
+  // Helper: Properly handle payment status
+  // We'll add a derived value for isPaidValue so that we can pass undefined if All/empty, true if 'paid', false if 'unpaid'
+  const getIsPaidValue = (val) => {
+    if (val === 'paid') return true
+    if (val === 'unpaid') return false
+    return undefined
+  }
+
+  // Handlers
   const handleCitySearchChange = (e) => {
     setCitySearchTerm(e.target.value)
+  }
+
+  const handlePaymentStatusChange = (e) => {
+    setPaymentStatusFilter(e.target.value)
   }
 
   // Debounce search term to avoid too many API calls
@@ -66,10 +80,7 @@ const Registration = () => {
     const timerId = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
     }, 500)
-
-    return () => {
-      clearTimeout(timerId)
-    }
+    return () => clearTimeout(timerId)
   }, [searchTerm])
 
   // Debounce city search term to avoid too many API calls
@@ -77,11 +88,14 @@ const Registration = () => {
     const timerId = setTimeout(() => {
       setDebouncedCitySearchTerm(citySearchTerm)
     }, 500)
-
-    return () => {
-      clearTimeout(timerId)
-    }
+    return () => clearTimeout(timerId)
   }, [citySearchTerm])
+
+  // On changing filters (paymentStatusFilter, search, etc), reset back to page 1.
+  useEffect(() => {
+    setCurrentPage(1)
+    // Optionally: Refetch here if using manual fetching, but useGetLawyersQuery will update automatically.
+  }, [paymentStatusFilter, debouncedSearchTerm, debouncedCitySearchTerm, activeTab])
 
   const { data, error, isLoading, refetch } = useGetLawyersQuery({
     page: currentPage,
@@ -89,6 +103,7 @@ const Registration = () => {
     type: activeTab,
     search: debouncedSearchTerm,
     city: debouncedCitySearchTerm || undefined,
+    is_paid: getIsPaidValue(paymentStatusFilter),
   })
 
   const paginatedLawyers = data?.data?.lawyers || []
@@ -121,10 +136,9 @@ const Registration = () => {
       setToastVisible(true)
       window.history.replaceState({}, document.title)
     }
-  }, [modified, activeTab])
+  }, [modified, activeTab, refetch])
 
   const handleSearchChange = (e) => {
-    console.log(e.target.value)
     setSearchTerm(e.target.value)
   }
 
@@ -271,7 +285,25 @@ const Registration = () => {
 
           {/* Search Fields */}
           <CCol xs="auto" className="d-flex align-items-center p-0">
-            {/* City Search */}
+            {/* Payment Status Dropdown */}
+            {/* <div className="me-2">
+              <CFormSelect
+                value={paymentStatusFilter}
+                onChange={handlePaymentStatusChange}
+                style={{
+                  width: '150px',
+                  fontSize: '1rem',
+                  height: '44px',
+                  borderRadius: '6px',
+                }}
+                aria-label="Filter by payment status"
+              >
+                <option value="">All Payment Status</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+              </CFormSelect>
+            </div> */}
+            {/* City search */}
             <div className="position-relative me-2">
               <CIcon
                 icon={cilSearch}
@@ -285,14 +317,13 @@ const Registration = () => {
                 onChange={handleCitySearchChange}
                 className="ps-5"
                 style={{
-                  width: '250px', // Reduced width for compactness
+                  width: '200px', // Slightly reduced width for more compactness
                   fontSize: '1rem',
                   height: '44px',
                   borderRadius: '6px',
                 }}
               />
             </div>
-
             {/* Name / Phone / Email Search */}
             <div className="position-relative">
               <CIcon
@@ -307,7 +338,7 @@ const Registration = () => {
                 onChange={handleSearchChange}
                 className="ps-5"
                 style={{
-                  width: '280px', // Slightly wider for long text
+                  width: '240px', // Slightly reduced to allow space for the new dropdown
                   fontSize: '1rem',
                   height: '44px',
                   borderRadius: '6px',
@@ -384,9 +415,6 @@ const Registration = () => {
                   <CTableDataCell className="text-center">
                     {`${lawyer?.age || 'N/A'} / ${lawyer?.gender || 'N/A'}`}
                   </CTableDataCell>
-                  {/* <CTableDataCell className="text-center">
-                    {`${lawyer?.is_paid === true ? 'Paid' : 'Unpaid'}`}
-                  </CTableDataCell> */}
                   <CTableDataCell className="text-center">
                     <CBadge color={lawyer?.is_paid === true ? 'success' : 'danger'}>
                       {lawyer?.is_paid === true ? 'Paid' : 'Unpaid'}
@@ -402,7 +430,9 @@ const Registration = () => {
             ) : (
               <CTableRow>
                 <CTableDataCell colSpan={7} className="text-center py-4">
-                  {debouncedSearchTerm ? 'No matching lawyers found.' : 'No lawyers found.'}
+                  {debouncedSearchTerm || paymentStatusFilter
+                    ? 'No matching lawyers found.'
+                    : 'No lawyers found.'}
                 </CTableDataCell>
               </CTableRow>
             )}

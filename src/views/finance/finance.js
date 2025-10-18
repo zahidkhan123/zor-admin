@@ -25,7 +25,6 @@ import {
   CWidgetStatsC,
   CFormInput,
   CBadge,
-  CButton,
 } from '@coreui/react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
@@ -33,17 +32,17 @@ import { cilPeople, cilUserFollow, cilPlus, cilSearch, cilCalendar } from '@core
 import { useGetBookingsQuery } from '../../services/api'
 import { FaCheckCircle } from 'react-icons/fa'
 
-const tabs = [
-  { key: 'confirmed', label: 'Upcoming' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'cancelled', label: 'Cancelled' },
-  { key: 'incomplete', label: 'Incomplete' },
+// const tabs = [
+//   { key: 'confirmed', label: 'Upcoming' },
+//   { key: 'completed', label: 'Completed' },
+//   { key: 'cancelled', label: 'Cancelled' },
+//   { key: 'incomplete', label: 'Incomplete' },
 
-  { key: 'all', label: 'All Bookings' },
-]
+//   { key: 'all', label: 'All Bookings' },
+// ]
 const PAGE_SIZE = 100 // Changed to match backend default
 
-const Bookings = () => {
+const Finance = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { modified } = location.state || {}
@@ -234,90 +233,62 @@ const Bookings = () => {
       </CToaster>
       <CCard className="mb-4 p-3">
         <CRow className="justify-content-center">
-          <CCol xs={12} sm={4} lg={4} xxl={4} className="mb-4">
+          <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
             <CWidgetStatsC
               icon={<CIcon icon={cilCalendar} height={36} />}
               value={summary?.totalCompletedBookings?.toString() || '0'}
-              title={'Completed Bookings'}
+              title={'Total Revenue(this month)'}
               progress={{ color: 'success', value: 75 }}
             />
           </CCol>
-          <CCol xs={12} sm={4} lg={4} xxl={4} className="mb-4">
+          <CCol xs={12} sm={6} lg={6} xxl={6} className="mb-4">
             <CWidgetStatsC
               icon={<CIcon icon={cilCalendar} height={36} />}
               value={summary?.totalCancelledBookings?.toString() || '0'}
-              title={'Cancelled Bookings'}
-              progress={{ color: 'warning', value: 75 }}
-            />
-          </CCol>
-          {/* <CCol xs={12} sm={4} lg={4} xxl={4} className="mb-4">
-            <CWidgetStatsC
-              icon={<CIcon icon={cilCalendar} height={36} />}
-              value={summary?.totalIncompleteBookings?.toString() || '0'}
-              title={'Incomplete Bookings'}
-              progress={{ color: 'warning', value: 75 }}
-            />
-          </CCol> */}
-          <CCol xs={12} sm={4} lg={4} xxl={4} className="mb-4">
-            <CWidgetStatsC
-              icon={<CIcon icon={cilCalendar} height={36} />}
-              value={summary?.totalUpcomingBookings?.toString() || '0'}
-              title={'Upcoming Bookings'}
+              title={'Refunds(this month)'}
               progress={{ color: 'warning', value: 75 }}
             />
           </CCol>
         </CRow>
       </CCard>
       <CCardBody>
-        <CRow className="mb-3">
-          <CCol xs={12}>
-            <span
+        <CRow className="align-items-center mb-3">
+          <CCol xs={12} md={4} className="mb-2 d-flex align-items-center justify-content-start">
+            <div
               className="fw-bold"
               style={{
-                fontSize: '1.6rem',
-                color: '#212529',
-                padding: '0.6rem 1.2rem',
-                borderRadius: '0.6rem',
+                fontSize: '1.5rem',
+                color: 'var(--cui-body-color, #212529)',
                 background: 'none',
-                letterSpacing: '0.03em',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
                 boxShadow: 'none',
-                display: 'block',
+                letterSpacing: '0.5px',
+                transition: 'color 0.2s',
               }}
             >
-              Booking &amp; Appointments
-            </span>
+              Revenue
+            </div>
           </CCol>
-        </CRow>
-        <CRow className="align-items-center mb-4">
-          <CCol xs={12} md={6} className="mb-2 d-flex">
-            <CButton
-              color="warning"
-              onClick={() => navigate('/bookings/create')}
-              style={{
-                fontSize: '1.15rem',
-                height: '48px',
-                borderRadius: '7px',
-                width: '100%',
-                maxWidth: 220,
-                minWidth: 170,
-                boxShadow: '0 2px 16px 0 rgba(0,0,0,0.07)',
-              }}
-            >
-              <CIcon icon={cilPlus} className="me-2" />
-              Create Booking
-            </CButton>
+          <CCol xs={12} md={4} className="mb-2">
+            {/* <div className="position-relative" style={{ maxWidth: '600px' }}>
+              <CIcon icon={cilSearch} className="position-absolute" style={{ top: '17px', left: '15px', zIndex: 10 }} />
+              <CFormInput
+                type="text"
+                placeholder="Search by city..."
+                value={citySearchTerm}
+                onChange={handleCitySearchChange}
+                className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+              />
+            </div> */}
           </CCol>
-          <CCol xs={12} md={6} className="mb-2 d-flex justify-content-end">
-            <div className="position-relative" style={{ width: '100%', maxWidth: '420px' }}>
+          <CCol xs={12} md={4} className="mb-2">
+            <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
               <CIcon
                 icon={cilSearch}
                 className="position-absolute"
-                style={{
-                  top: '50%',
-                  left: '16px',
-                  zIndex: 10,
-                  transform: 'translateY(-50%)',
-                }}
+                style={{ top: '17px', left: '15px', zIndex: 10 }}
               />
               <CFormInput
                 type="text"
@@ -325,20 +296,14 @@ const Bookings = () => {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="ps-5"
-                style={{
-                  width: '100%',
-                  minWidth: '200px',
-                  fontSize: '1.05rem',
-                  height: '48px',
-                  borderRadius: '7px',
-                }}
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
               />
             </div>
           </CCol>
         </CRow>
       </CCardBody>
       <CCard className="mb-4">
-        <CNav variant="tabs" className="mb-4">
+        {/* <CNav variant="tabs" className="mb-4">
           {tabs.map((tab, idx) => (
             <CNavItem key={idx}>
               <CNavLink active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
@@ -346,17 +311,15 @@ const Bookings = () => {
               </CNavLink>
             </CNavItem>
           ))}
-        </CNav>
+        </CNav> */}
         <CTable align="middle" className="mb-0 border" hover responsive>
           <CTableHead className="text-nowrap">
             <CTableRow>
-              <CTableHeaderCell className="text-center">ID</CTableHeaderCell>
-              <CTableHeaderCell className="text-center">Lawyer</CTableHeaderCell>
-              <CTableHeaderCell className="text-center">User</CTableHeaderCell>
-              <CTableHeaderCell className="text-center">Booking Schedule</CTableHeaderCell>
-              <CTableHeaderCell className="text-center">Booking Location</CTableHeaderCell>
-              <CTableHeaderCell className="text-center">Payment Status</CTableHeaderCell>
-              <CTableHeaderCell className="text-center">Price</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Transaction ID</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Bank Name</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Time & Date</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Amount</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Status</CTableHeaderCell>
               <CTableHeaderCell className="text-center">Action</CTableHeaderCell>
             </CTableRow>
           </CTableHead>
@@ -383,22 +346,169 @@ const Bookings = () => {
                   <CTableDataCell className="text-center">
                     {booking?._id?.slice(-5)?.toUpperCase()}
                   </CTableDataCell>
+
                   <CTableDataCell className="text-center">
-                    <div className="d-flex align-items-center justify-content-center">
-                      <CAvatar size="md" src={booking?.lawyer?.image} />
-                      <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
-                        {booking?.lawyer?.name}
-                      </div>
-                    </div>
+                    {booking?.date
+                      ? new Date(booking.date).toLocaleDateString() + ' ' + (booking?.slot || '')
+                      : ''}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">{booking?.location}</CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <CBadge
+                      color={
+                        booking?.payments?.status === 'paid'
+                          ? 'success'
+                          : booking?.payments?.status === 'unpaid'
+                            ? 'warning'
+                            : 'secondary'
+                      }
+                    >
+                      {booking?.payments?.status || 'N/A'}
+                    </CBadge>
                   </CTableDataCell>
                   <CTableDataCell className="text-center">
-                    <div className="d-flex align-items-center justify-content-center">
-                      <CAvatar size="md" src={booking?.user?.image} />
-                      <div className="ms-2 text-start" style={{ minWidth: '120px' }}>
-                        {booking?.user?.name}
-                      </div>
-                    </div>
+                    {booking?.payments?.payable_amount
+                      ? `Rs. ${booking.payments.payable_amount}`
+                      : 'N/A'}
                   </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <CDropdown alignment="end">
+                      <span style={{ fontSize: '24px', cursor: 'pointer' }}>⋮</span>
+                    </CDropdown>
+                  </CTableDataCell>
+                </CTableRow>
+              ))
+            ) : (
+              !isFetching && (
+                <CTableRow>
+                  <CTableDataCell colSpan={8} className="text-center py-4">
+                    {debouncedSearchTerm ? 'No matching bookings found.' : 'No bookings found.'}
+                  </CTableDataCell>
+                </CTableRow>
+              )
+            )}
+          </CTableBody>
+        </CTable>
+        {/* Pagination: Only show if there are bookings and more than 1 page */}
+        {bookings.length > 0 && totalPages > 1 && (
+          <div className="d-flex justify-content-end mt-3 me-3">
+            <CPagination>
+              <CPaginationItem
+                aria-label="Previous"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
+                &laquo;
+              </CPaginationItem>
+              {renderPaginationItems()}
+              <CPaginationItem
+                aria-label="Next"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
+                &raquo;
+              </CPaginationItem>
+            </CPagination>
+          </div>
+        )}
+      </CCard>
+
+      <CCardBody>
+        <CRow className="align-items-center mb-3">
+          <CCol xs={12} md={4} className="mb-2 d-flex align-items-center justify-content-start">
+            <div
+              className="fw-bold"
+              style={{
+                fontSize: '1.5rem',
+                color: 'var(--cui-body-color, #212529)',
+                background: 'none',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                boxShadow: 'none',
+                letterSpacing: '0.5px',
+                transition: 'color 0.2s',
+              }}
+            >
+              Refunds
+            </div>
+          </CCol>
+          <CCol xs={12} md={4} className="mb-2">
+            {/* <div className="position-relative" style={{ maxWidth: '600px' }}>
+              <CIcon icon={cilSearch} className="position-absolute" style={{ top: '17px', left: '15px', zIndex: 10 }} />
+              <CFormInput
+                type="text"
+                placeholder="Search by city..."
+                value={citySearchTerm}
+                onChange={handleCitySearchChange}
+                className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+              />
+            </div> */}
+          </CCol>
+          <CCol xs={12} md={4} className="mb-2">
+            <div className="position-relative" style={{ maxWidth: '600px', float: 'right' }}>
+              <CIcon
+                icon={cilSearch}
+                className="position-absolute"
+                style={{ top: '17px', left: '15px', zIndex: 10 }}
+              />
+              <CFormInput
+                type="text"
+                placeholder="Search by transaction ID..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="ps-5"
+                style={{ minWidth: '400px', fontSize: '1.1rem', height: '48px' }}
+              />
+            </div>
+          </CCol>
+        </CRow>
+      </CCardBody>
+      <CCard className="mb-4">
+        {/* <CNav variant="tabs" className="mb-4">
+          {tabs.map((tab, idx) => (
+            <CNavItem key={idx}>
+              <CNavLink active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
+                {tab.label}
+              </CNavLink>
+            </CNavItem>
+          ))}
+        </CNav> */}
+        <CTable align="middle" className="mb-0 border" hover responsive>
+          <CTableHead className="text-nowrap">
+            <CTableRow>
+              <CTableHeaderCell className="text-center">Transaction ID</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Bank Name</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Time & Date</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Amount</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Status</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Action</CTableHeaderCell>
+            </CTableRow>
+          </CTableHead>
+          <CTableBody>
+            {isFetching ? (
+              <CTableRow>
+                <CTableDataCell colSpan={8} className="text-center py-4">
+                  <CSpinner
+                    color="warning"
+                    style={{ width: '3rem', height: '3rem' }}
+                    variant="grow"
+                  />
+                </CTableDataCell>
+              </CTableRow>
+            ) : bookings.length > 0 ? (
+              bookings.map((booking) => (
+                <CTableRow
+                  key={booking._id}
+                  onClick={() =>
+                    navigate(`/bookings/detail/${booking._id}`, { state: { booking } })
+                  }
+                  style={{ cursor: 'pointer' }}
+                >
+                  <CTableDataCell className="text-center">
+                    {booking?._id?.slice(-5)?.toUpperCase()}
+                  </CTableDataCell>
+
                   <CTableDataCell className="text-center">
                     {booking?.date
                       ? new Date(booking.date).toLocaleDateString() + ' ' + (booking?.slot || '')
@@ -468,7 +578,7 @@ const Bookings = () => {
   )
 }
 
-export default Bookings
+export default Finance
 
 // import React, { useEffect, useState } from 'react'
 // import {

@@ -37,6 +37,9 @@ const LawyerView = () => {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
+  const [proofFileUrl, setProofFileUrl] = useState('')
+  const [proofFileLoading, setProofFileLoading] = useState(false)
+  const [selectedImage, setSelectedImage] = useState('')
   const theme = useSelector((state) => state.ui.theme)
 
   // Fix: Ensure modal opens by using a function to set both modalType and showModal together
@@ -57,6 +60,23 @@ const LawyerView = () => {
       }
     }
     loadAvatar()
+  }, [lawyer])
+
+  useEffect(() => {
+    const loadProofFile = async () => {
+      if (lawyer?.proof_file) {
+        setProofFileLoading(true)
+        try {
+          const url = await fetchSignedUrl(lawyer.proof_file)
+          setProofFileUrl(url)
+        } catch (error) {
+          setProofFileUrl('')
+        } finally {
+          setProofFileLoading(false)
+        }
+      }
+    }
+    loadProofFile()
   }, [lawyer])
 
   if (!lawyer) return <p>No lawyer data available</p>
@@ -245,6 +265,74 @@ const LawyerView = () => {
             </div>
           )}
 
+          {/* Proof Document Section */}
+          {lawyer?.proof_file && (
+            <div className="mt-4">
+              <h6 className="mb-2">Proof Document</h6>
+              <div className="d-flex flex-wrap gap-3 mb-3 align-items-center justify-content-center">
+                <div
+                  style={{
+                    width: '250px',
+                    height: '200px',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    border: '2px solid #f6bd60',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#faf8ee',
+                    position: 'relative',
+                    boxShadow: '0 6px 24px rgba(246,189,96,0.08)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    setSelectedImage(proofFileUrl)
+                    setShowModal(true)
+                  }}
+                >
+                  {proofFileLoading ? (
+                    <span className="d-flex align-items-center justify-content-center w-100 h-100">
+                      <CSpinner size="lg" />
+                    </span>
+                  ) : proofFileUrl ? (
+                    <CImage
+                      src={proofFileUrl}
+                      crossOrigin="anonymous"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        borderRadius: '16px',
+                        background: '#fffbe5',
+                      }}
+                    />
+                  ) : (
+                    <span className="small text-muted p-3">No document image to show</span>
+                  )}
+
+                  {/* Label overlay */}
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: 8,
+                      right: 10,
+                      background: 'rgba(246,189,96,.95)',
+                      color: '#5a4400',
+                      padding: '3px 12px',
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 12px rgba(246,189,96,0.12)',
+                      letterSpacing: '.03em',
+                    }}
+                  >
+                    Proof File
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mt-4">
             <h5 className="mb-3">Add Notes</h5>
             <CFormTextarea
@@ -296,6 +384,49 @@ const LawyerView = () => {
         confirmColor={modalType === 'approve' ? 'success' : 'warning'}
         cancelColor={modalType === 'approve' ? 'warning' : 'warning'}
       />
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            zIndex: 9999,
+          }}
+          onClick={() => {
+            setSelectedImage('')
+            setShowModal(false)
+          }}
+        >
+          <div
+            className="position-relative"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+          >
+            <img
+              src={selectedImage}
+              alt="Proof document"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                borderRadius: '8px',
+              }}
+            />
+            <CButton
+              color="light"
+              className="position-absolute top-0 end-0 m-2"
+              onClick={() => {
+                setSelectedImage('')
+                setShowModal(false)
+              }}
+              style={{ zIndex: 10000 }}
+            >
+              ×
+            </CButton>
+          </div>
+        </div>
+      )}
     </>
   )
 }
