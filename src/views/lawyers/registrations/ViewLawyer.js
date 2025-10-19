@@ -121,12 +121,12 @@ const LawyerView = () => {
 
       // Include approval proof image data if approving
       if (status === 'approved' && approvalProofImage && approvalProofImage.url) {
-        updateData.approvalProofImageUrl = approvalProofImage.url
-        updateData.approvalProofImageKey = approvalProofImage.key
+        // updateData.approvalProofImageUrl = approvalProofImage.url
+        updateData.proof_file = approvalProofImage.key
       }
 
       const result = await updateLawyer(updateData)
-
+      console.log('result ', result)
       if (result?.data?.success === true) {
         setToastMessage(`Lawyer ${status} successfully`)
         setToastColor('success')
