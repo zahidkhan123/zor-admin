@@ -292,6 +292,25 @@ export const api = createApi({
         },
       }),
     }),
+    getReasonsDropdown: builder.query({
+      query: () => ({
+        url: '/admin/dropdowns?type=Reason',
+        method: 'GET',
+      }),
+    }),
+    getVideoPreferenceDropdown: builder.query({
+      query: () => ({
+        url: '/admin/dropdowns?type=Video_Preference',
+        method: 'GET',
+      }),
+    }),
+    createBooking: builder.mutation({
+      query: (bookingData) => ({
+        url: '/admin/bookings/create',
+        method: 'POST',
+        body: bookingData,
+      }),
+    }),
   }),
 })
 
@@ -329,4 +348,7 @@ export const {
   useGetLawyersByCategoryQuery,
   useGetAvailableSlotsQuery,
   useUploadImageMutation,
+  useGetReasonsDropdownQuery,
+  useGetVideoPreferenceDropdownQuery,
+  useCreateBookingMutation,
 } = api

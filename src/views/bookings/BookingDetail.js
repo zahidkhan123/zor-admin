@@ -142,23 +142,23 @@ const BookingDetail = () => {
                   <div style={{ lineHeight: '1.8', fontSize: '1.05rem' }}>
                     <p className="mb-2">
                       <strong>Email Address: </strong>
-                      <span className="ms-1">{booking?.user?.email || '-'}</span>
+                      <span className="ms-1">{booking?.lawyer?.email || '-'}</span>
                     </p>
                     <p className="mb-2">
                       <strong>Phone: </strong>
-                      <span className="ms-1">{booking?.user?.phone || '-'}</span>
+                      <span className="ms-1">{booking?.lawyer?.phone || '-'}</span>
                     </p>
                     <p className="mb-2">
                       <strong>Gender: </strong>
-                      <span className="ms-1">{booking?.user?.gender || '-'}</span>
+                      <span className="ms-1">{booking?.lawyer?.gender || '-'}</span>
                     </p>
                     <p className="mb-2">
                       <strong>Age: </strong>
-                      <span className="ms-1">{getAge(booking?.user?.dob)} yrs</span>
+                      <span className="ms-1">{getAge(booking?.lawyer?.dob)} yrs</span>
                     </p>
                     <p className="mb-2">
                       <strong>Whatsapp: </strong>
-                      <span className="ms-1">{booking?.user?.whatsapp || '-'}</span>
+                      <span className="ms-1">{booking?.lawyer?.whatsapp || '-'}</span>
                     </p>
                   </div>
                   <div

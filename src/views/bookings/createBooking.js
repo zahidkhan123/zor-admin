@@ -23,6 +23,9 @@ import {
   useGetAvailableSlotsQuery,
   useGetUsersQuery,
   useUploadImageMutation,
+  useGetReasonsDropdownQuery,
+  useGetVideoPreferenceDropdownQuery,
+  useCreateBookingMutation,
 } from '../../services/api'
 
 const CreateBooking = () => {
@@ -37,6 +40,8 @@ const CreateBooking = () => {
     time: '',
     mobile: '',
     payment: 'online',
+    reason: '',
+    videoPreference: '',
   })
 
   const [lawyerSearch, setLawyerSearch] = useState('')
@@ -85,6 +90,12 @@ const CreateBooking = () => {
     { skip: !formData.date || !formData.location || !formData.lawyerId },
   )
   const [uploadImage] = useUploadImageMutation()
+  const [createBooking, { isLoading: isCreatingBooking }] = useCreateBookingMutation()
+
+  // Dropdown queries
+  const { data: reasonsData, isLoading: reasonsLoading } = useGetReasonsDropdownQuery()
+  const { data: videoPreferenceData, isLoading: videoPreferenceLoading } =
+    useGetVideoPreferenceDropdownQuery()
   // Debug: Log API responses
   useEffect(() => {
     // [Debug logs omitted]
@@ -171,6 +182,13 @@ const CreateBooking = () => {
               consultationType: value,
               location: selectedType.title || '',
               time: '',
+              reason: '',
+              videoPreference: '',
+              // Auto-switch to online payment if consultation type is online and cash was selected
+              payment:
+                value.toLowerCase().includes('online') && prev.payment === 'cash'
+                  ? 'online'
+                  : prev.payment,
             }))
             setAvailableSlots([])
             return
@@ -187,12 +205,26 @@ const CreateBooking = () => {
           consultationType: value,
           location: selectedType?.title || '',
           time: '',
+          reason: '',
+          videoPreference: '',
+          // Auto-switch to online payment if consultation type is online and cash was selected
+          payment:
+            value.toLowerCase().includes('online') && prev.payment === 'cash'
+              ? 'online'
+              : prev.payment,
         }))
         setAvailableSlots([])
       } else {
         setFormData((prev) => ({
           ...prev,
           consultationType: value,
+          reason: '',
+          videoPreference: '',
+          // Auto-switch to online payment if consultation type is online and cash was selected
+          payment:
+            value.toLowerCase().includes('online') && prev.payment === 'cash'
+              ? 'online'
+              : prev.payment,
         }))
         setAvailableSlots([])
       }
@@ -318,7 +350,7 @@ const CreateBooking = () => {
   }, [])
 
   // Submit handler
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (
       !formData.category ||
@@ -335,19 +367,92 @@ const CreateBooking = () => {
       alert('Please select a user for the booking')
       return
     }
-    const bookingData = {
-      ...formData,
-      userId: selectedUser._id,
-      userName: selectedUser.name,
-      userEmail: selectedUser.email,
-      userPhone: selectedUser.phone,
-      ...(formData.proofImageUrl && {
-        proofImageUrl: formData.proofImageUrl,
-        proofImageKey: formData.proofImageKey,
-      }),
+
+    // Validate online consultation fields
+    const isOnline = formData.consultationType.toLowerCase().includes('online')
+    if (isOnline) {
+      if (!formData.reason || !formData.videoPreference) {
+        alert('Please select both reason and video preference for online consultation')
+        return
+      }
+      debugger
+      // Proof image is REQUIRED for online booking
+      if (!formData.proofImageUrl) {
+        alert('Please upload proof image for online booking.')
+        return
+      }
     }
-    // eslint-disable-next-line no-console
-    console.log('Booking Created:', bookingData)
+    debugger
+    try {
+      // Find the selected consultation type to get the location ID
+      const selectedConsultationType = consultationTypes.find(
+        (type) => type.title === formData.consultationType,
+      )
+
+      // Find the selected slot ID
+      const selectedSlot = availableSlots.find((slot) => slot.name === formData.time)
+
+      // Find the reason ID
+      const selectedReason = reasonsData?.data?.find((reason) => reason.name === formData.reason)
+
+      // Find the video preference ID
+      const selectedVideoPreference = videoPreferenceData?.data?.find(
+        (preference) => preference.name === formData.videoPreference,
+      )
+
+      // Build the request body according to the API specification
+      // Fix: reason_id must be an array according to server response
+
+      // If booking is online, proof_url is always required.
+      let bookingFields = {
+        lawyer_id: formData.lawyerId,
+        appointment_type: isOnline ? 'online' : 'physical',
+        date: formData.date,
+        slot_id: selectedSlot?._id || selectedSlot?.id,
+        lawyer_location_id: selectedConsultationType?._id || selectedConsultationType?.id,
+        app_version: '1.0.5',
+        platform: 'admin',
+        // Only include proof_url if present for offline, always for online (checked above)
+        ...(isOnline && { proof_url: formData.proofImageKey }),
+        // Add online-specific fields only if consultation type is online
+        ...(isOnline && {
+          video_preference_id: selectedVideoPreference?._id || selectedVideoPreference?.id,
+          reason_id:
+            selectedReason && (selectedReason._id || selectedReason.id)
+              ? [selectedReason._id || selectedReason.id]
+              : [],
+        }),
+      }
+      let paymentFields = {
+        payable_amount: selectedConsultationType?.fee || 0,
+        payment_type: formData.payment,
+        total_amount: selectedConsultationType?.fee || 0,
+      }
+      debugger
+      const requestBody = {
+        user_id: selectedUser._id,
+        booking: bookingFields,
+        payment: paymentFields,
+      }
+
+      console.log('Creating booking with data:', requestBody)
+
+      // Call the API
+      const response = await createBooking(requestBody).unwrap()
+
+      if (response.success) {
+        alert('Booking created successfully!')
+        // Reset form or redirect as needed
+        console.log('Booking created:', response.data)
+      } else {
+        alert('Failed to create booking: ' + (response.message || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error)
+      alert(
+        'Failed to create booking: ' + (error.data?.message || error.message || 'Unknown error'),
+      )
+    }
   }
 
   return (
@@ -602,6 +707,47 @@ const CreateBooking = () => {
                 />
               </CCol>
             </CRow>
+
+            {/* Online Consultation Additional Fields */}
+            {formData.consultationType &&
+              formData.consultationType.toLowerCase().includes('online') && (
+                <CRow className="mb-4">
+                  <CCol md={6}>
+                    <CFormLabel>Reason for Consultation</CFormLabel>
+                    <CFormSelect name="reason" value={formData.reason} onChange={handleChange}>
+                      <option value="">Select Reason</option>
+                      {reasonsLoading ? (
+                        <option disabled>Loading...</option>
+                      ) : (
+                        reasonsData?.data?.map((reason) => (
+                          <option key={reason._id} value={reason.name}>
+                            {reason.name}
+                          </option>
+                        ))
+                      )}
+                    </CFormSelect>
+                  </CCol>
+                  <CCol md={6}>
+                    <CFormLabel>Video Preference</CFormLabel>
+                    <CFormSelect
+                      name="videoPreference"
+                      value={formData.videoPreference}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Video Preference</option>
+                      {videoPreferenceLoading ? (
+                        <option disabled>Loading...</option>
+                      ) : (
+                        videoPreferenceData?.data?.map((preference) => (
+                          <option key={preference._id} value={preference.name}>
+                            {preference.name}
+                          </option>
+                        ))
+                      )}
+                    </CFormSelect>
+                  </CCol>
+                </CRow>
+              )}
             {/* Row 4: Time Slot Selection */}
             {formData.date && formData.consultationType && (
               <CRow className="mb-4">
@@ -721,8 +867,18 @@ const CreateBooking = () => {
 
                     {/* Cash Option */}
                     <div
-                      onClick={() => setFormData((prev) => ({ ...prev, payment: 'cash' }))}
-                      className={`d-flex align-items-center justify-content-between px-3 py-2 rounded-4 border cursor-pointer ${
+                      onClick={
+                        formData.consultationType &&
+                        formData.consultationType.toLowerCase().includes('online')
+                          ? undefined
+                          : () => setFormData((prev) => ({ ...prev, payment: 'cash' }))
+                      }
+                      className={`d-flex align-items-center justify-content-between px-3 py-2 rounded-4 border ${
+                        formData.consultationType &&
+                        formData.consultationType.toLowerCase().includes('online')
+                          ? 'cursor-not-allowed opacity-50'
+                          : 'cursor-pointer'
+                      } ${
                         formData.payment === 'cash'
                           ? 'bg-warning-subtle border-warning shadow-sm'
                           : 'border-light bg-white'
@@ -872,8 +1028,15 @@ const CreateBooking = () => {
               {/* <CButton color="secondary" variant="outline">
                 Save as Draft
               </CButton> */}
-              <CButton color="dark" type="submit">
-                Create
+              <CButton color="dark" type="submit" disabled={isCreatingBooking}>
+                {isCreatingBooking ? (
+                  <>
+                    <CSpinner size="sm" className="me-2" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create'
+                )}
               </CButton>
             </div>
           </CForm>
